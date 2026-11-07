@@ -28,7 +28,7 @@ function ToolPage() {
   const { slug } = Route.useLoaderData();
   const tool = getTool(slug)!;
   const cat = getCategory(tool.category)!;
-  const Comp = toolComponents[slug];
+  const Comp = toolComponents[slug]!;
   const noun = tool.name.toLowerCase();
   const fileBased = ["image", "pdf", "file-media"].includes(tool.category) && !["base64-to-image"].includes(slug);
 
