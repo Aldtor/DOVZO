@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
+import { encodeBase64, decodeBase64 } from "@/lib/tool-processing";
 import { Area, Btn, CopyBtn, ErrorNote, Field, Select, inputCls } from "./kit";
 
 function parseJson(s: string): { v?: unknown; err?: string } {
@@ -51,8 +52,8 @@ export function JsonMinifier() {
   );
 }
 
-const b64enc = (s: string) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
-const b64dec = (s: string) => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/").replace(/\s/g, "")), (c) => c.charCodeAt(0)));
+const b64enc = encodeBase64;
+const b64dec = decodeBase64;
 
 function Transform({ fn, placeholder }: { fn: (s: string) => string; placeholder: string }) {
   const [v, setV] = useState("");
@@ -101,20 +102,27 @@ export function UuidGenerator() {
 export function HashGenerator() {
   const [v, setV] = useState("");
   const [hashes, setHashes] = useState<[string, string][]>([]);
+  const request = useRef(0);
+  const [error, setError] = useState("");
   const run = async (s: string) => {
+    const id = ++request.current;
     setV(s);
+    setHashes([]); setError("");
     if (!s) return setHashes([]);
+    try {
     const data = new TextEncoder().encode(s);
     const out: [string, string][] = [];
     for (const a of ["SHA-1", "SHA-256", "SHA-384", "SHA-512"]) {
       const buf = await crypto.subtle.digest(a, data);
       out.push([a, [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, "0")).join("")]);
     }
-    setHashes(out);
+    if (id === request.current) setHashes(out);
+    } catch { if (id === request.current) setError("Hashing is unavailable in this browser."); }
   };
   return (
     <div className="space-y-4">
       <Area value={v} onChange={run} rows={6} placeholder="Text to hash" />
+      {error && <ErrorNote>{error}</ErrorNote>}
       <div className="space-y-2">{hashes.map(([a, h]) => (
         <div key={a} className="flex items-center gap-3 rounded-xl bg-secondary p-3"><span className="w-20 text-xs font-semibold">{a}</span><code className="flex-1 break-all font-mono text-xs">{h}</code><CopyBtn text={h} /></div>
       ))}</div>
@@ -128,10 +136,11 @@ export function JwtDecoder() {
   let header = "", payload = "", err = "", exp = "";
   if (v.trim()) {
     try {
-      if (parts.length < 2) throw 0;
+      if (parts.length !== 3) throw new Error("JWTs must contain three parts.");
       const h = JSON.parse(b64dec(parts[0])); const p = JSON.parse(b64dec(parts[1]));
+      if (!h || typeof h !== "object" || Array.isArray(h) || !p || typeof p !== "object" || Array.isArray(p)) throw new Error("Header and payload must be objects.");
       header = JSON.stringify(h, null, 2); payload = JSON.stringify(p, null, 2);
-      if (p.exp) exp = `${new Date(p.exp * 1000).toLocaleString()} ${p.exp * 1000 < Date.now() ? "(expired)" : ""}`;
+      if (typeof p.exp === "number") exp = `${new Date(p.exp * 1000).toLocaleString()} ${p.exp * 1000 < Date.now() ? "(expired)" : ""}`;
     } catch { err = "That doesn't look like a valid JWT."; }
   }
   return (
@@ -152,10 +161,16 @@ export function RegexTester() {
   const [text, setText] = useState("Contact hello@dovzo.com or support@example.org");
   const res = useMemo(() => {
     try {
-      const re = new RegExp(pat, flags.includes("g") ? flags : flags + "g");
-      const ms = [...text.matchAll(re)].filter((m) => m[0] !== "");
+      const re = new RegExp(pat, flags);
+      const ms: RegExpExecArray[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = re.exec(text)) !== null) {
+        ms.push(match);
+        if (!re.global || ms.length >= 1000) break;
+        if (!match[0]) re.lastIndex += re.unicode ? ([...text.slice(re.lastIndex)][0]?.length ?? 1) : 1;
+      }
       const nodes: React.ReactNode[] = []; let last = 0;
-      ms.forEach((m, i) => { nodes.push(text.slice(last, m.index)); nodes.push(<mark key={i} className="rounded bg-primary/25 text-foreground">{m[0]}</mark>); last = m.index! + m[0].length; });
+      ms.forEach((m, i) => { nodes.push(text.slice(last, m.index)); nodes.push(<mark key={i} className="rounded bg-primary/25 text-foreground">{m[0]}</mark>); last = m.index + m[0].length; });
       nodes.push(text.slice(last));
       return { ms, nodes };
     } catch (e) { return { err: (e as Error).message }; }
@@ -169,7 +184,7 @@ export function RegexTester() {
       <Area value={text} onChange={setText} rows={6} />
       {"err" in res ? <ErrorNote>{res.err}</ErrorNote> : <>
         <div className="whitespace-pre-wrap rounded-xl bg-secondary p-3 text-sm">{res.nodes}</div>
-        <p className="text-sm text-muted-foreground">{res.ms!.length} match(es)</p>
+        <p className="text-sm text-muted-foreground">{res.ms?.length ?? 0} match(es){res.ms?.length === 1000 ? " · first 1,000 shown" : ""}</p>
       </>}
     </div>
   );

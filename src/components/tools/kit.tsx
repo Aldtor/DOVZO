@@ -14,28 +14,51 @@ export function download(data: Blob | string, filename: string) {
 export const fmtBytes = (n: number) =>
   n < 1024 ? `${n} B` : n < 1048576 ? `${(n / 1024).toFixed(1)} KB` : `${(n / 1048576).toFixed(2)} MB`;
 
-export function FileDrop({ accept, multiple, onFiles, label }: { accept?: string; multiple?: boolean; onFiles: (f: File[]) => void; label?: string }) {
+export function acceptsFile(file: File, accept?: string) {
+  return !accept || accept.split(",").some((rule) => {
+    const r = rule.trim().toLowerCase();
+    return r.startsWith(".") ? file.name.toLowerCase().endsWith(r) : r.endsWith("/*") ? file.type.toLowerCase().startsWith(r.slice(0, -1)) : file.type.toLowerCase() === r || ({ "application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "application/zip": ".zip" }[r] && file.name.toLowerCase().endsWith({ "application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "application/zip": ".zip" }[r] ?? "")) || (r === "image/jpeg" && file.name.toLowerCase().endsWith(".jpeg"));
+  });
+}
+
+export function FileDrop({ accept, multiple, onFiles, label, disabled = false }: { accept?: string; multiple?: boolean; onFiles: (f: File[]) => void | Promise<void>; label?: string; disabled?: boolean }) {
   const ref = useRef<HTMLInputElement>(null);
   const [over, setOver] = useState(false);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const locked = disabled || loading;
+  const receive = async (files: File[]) => {
+    if (locked || !files.length) return;
+    if (files.some((f) => !acceptsFile(f, accept))) { setError(`Choose a supported file (${accept}).`); return; }
+    setError(""); setLoading(true);
+    try { await onFiles(multiple ? files : files.slice(0, 1)); }
+    catch (e) { setError(e instanceof Error ? e.message : "The file could not be opened."); }
+    finally { setLoading(false); }
+  };
   return (
+    <div className="space-y-3">
     <div
       role="button"
-      tabIndex={0}
+      tabIndex={locked ? -1 : 0}
+      aria-disabled={locked}
+      aria-busy={loading}
       aria-label={label ?? (multiple ? "Choose files" : "Choose a file")}
-      onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); ref.current?.click(); } }}
-      onClick={() => ref.current?.click()}
+      onKeyDown={(e) => { if (!locked && e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) { e.preventDefault(); ref.current?.click(); } }}
+      onClick={(e) => { if (!locked && e.target !== ref.current) ref.current?.click(); }}
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
-      onDrop={(e) => { e.preventDefault(); setOver(false); onFiles(Array.from(e.dataTransfer.files)); }}
+      onDrop={(e) => { e.preventDefault(); setOver(false); void receive(Array.from(e.dataTransfer.files)); }}
       className={`flex min-h-60 cursor-pointer flex-col items-center justify-center gap-4 rounded-lg border border-dashed px-5 py-8 text-center transition-colors sm:min-h-72 ${over ? "border-primary bg-accent" : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-accent/30"}`}
     >
       <span className="grid h-12 w-12 place-items-center rounded-lg border border-border bg-card text-primary"><Upload className="h-5 w-5" /></span>
       <div>
-        <p className="font-medium">{label ?? (multiple ? "Drop files here or click to choose" : "Drop a file here or click to choose")}</p>
+        <p className="font-medium">{loading ? "Opening files…" : label ?? (multiple ? "Drop files here or click to choose" : "Drop a file here or click to choose")}</p>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5 shrink-0" />Files stay on your device</p>
       </div>
-      <input ref={ref} type="file" hidden accept={accept} multiple={multiple}
-        onChange={(e) => { onFiles(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
+      <input ref={ref} type="file" hidden accept={accept} multiple={multiple} disabled={locked}
+        onChange={(e) => { void receive(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
+    </div>
+    {error && <ErrorNote>{error}</ErrorNote>}
     </div>
   );
 }
@@ -50,10 +73,14 @@ export function DownloadBtn({ onClick, children = "Download" }: { onClick: () =>
 
 export function CopyBtn({ text }: { text: string }) {
   const [ok, setOk] = useState(false);
+  const [error, setError] = useState("");
   return (
-    <Btn variant="ghost" disabled={!text} onClick={() => { navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 1200); }}>
+    <span className="inline-flex flex-col gap-1">
+    <Btn variant="ghost" disabled={!text} onClick={async () => { setError(""); try { await navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 1200); } catch { setError("Copy failed. Select and copy the result manually."); } }}>
       {ok ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}{ok ? "Copied" : "Copy"}
     </Btn>
+    {error && <span role="alert" className="text-xs text-destructive">{error}</span>}
+    </span>
   );
 }
 
@@ -77,7 +104,7 @@ export function Select({ value, onChange, options }: { value: string; onChange: 
 }
 
 export function ErrorNote({ children }: { children: ReactNode }) {
-  return <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{children}</p>;
+  return <p role="alert" className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">{children}</p>;
 }
 
 export function Stat({ label, value }: { label: string; value: ReactNode }) {

@@ -35,9 +35,9 @@ function ToolPage() {
   const fileBased = ["image", "pdf", "file-media"].includes(tool.category) && !["base64-to-image"].includes(slug);
 
   const faq = [
-    [`Is the ${noun} free?`, "Yes — completely free with no limits, sign-ups or watermarks."],
+    [`Is the ${noun} free?`, "Yes — completely free, with no sign-ups or watermarks. Processing limits depend on the tool and your device."],
     ["Are my files uploaded?", "No. Everything happens in your browser. Your data never leaves your device."],
-    ["Does it work on my phone?", "Yes. It works in any modern mobile browser."],
+    ["Does it work on my phone?", "Most tools work in modern mobile browsers. Supported file codecs and video recording depend on the browser; large files may exceed your device's memory."],
   ];
 
   return (

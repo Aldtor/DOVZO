@@ -32,3 +32,5 @@ use the editor.
 - Tool metadata lives only in `src/lib/tools.ts`; each tool's UI is registered by slug in `src/components/tools/registry.ts` and rendered by the single `/tools/$slug` route — keeps 50 tools consistent and adds a tool in two edits.
 - All tool processing runs client-side (canvas, pdf-lib, pdfjs, JSZip, Web Audio, MediaRecorder); no uploads, no AI — product rule from the brief.
 - Shared tool controls use the design-system Button through kit.tsx, and the tool-workspace frame owns common containment and preview styling — keeps all tools visually consistent without changing processing.
+- Shared processing validation and secure random sampling live in tool-processing.ts and have regression tests; accepted uploads are checked by FileDrop before processing to prevent invalid or stale downloads.
+- The admin route reports unavailable configuration without mock authentication or settings; real administration requires enabled Cloud and secure authorization.

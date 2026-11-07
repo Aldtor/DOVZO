@@ -11,11 +11,13 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AboutRouteImport } from './routes/about'
+import { Route as AdminRouteImport } from './routes/admin'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as DisclaimerRouteImport } from './routes/disclaimer'
 import { Route as NewRouteImport } from './routes/new'
 import { Route as PopularRouteImport } from './routes/popular'
 import { Route as PrivacyRouteImport } from './routes/privacy'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as CategoriesIndexRouteImport } from './routes/categories.index'
 import { Route as CategoriesCategoryRouteImport } from './routes/categories.$category'
@@ -30,6 +32,11 @@ const IndexRoute = IndexRouteImport.update({
 const AboutRoute = AboutRouteImport.update({
   id: '/about',
   path: '/about',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminRoute = AdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ContactRoute = ContactRouteImport.update({
@@ -55,6 +62,11 @@ const PopularRoute = PopularRouteImport.update({
 const PrivacyRoute = PrivacyRouteImport.update({
   id: '/privacy',
   path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsRoute = TermsRouteImport.update({
@@ -86,11 +98,13 @@ const ToolsSlugRoute = ToolsSlugRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/new': typeof NewRoute
   '/popular': typeof PopularRoute
   '/privacy': typeof PrivacyRoute
+  '/search': typeof SearchRoute
   '/terms': typeof TermsRoute
   '/categories/$category': typeof CategoriesCategoryRoute
   '/tools/$slug': typeof ToolsSlugRoute
@@ -100,11 +114,13 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/new': typeof NewRoute
   '/popular': typeof PopularRoute
   '/privacy': typeof PrivacyRoute
+  '/search': typeof SearchRoute
   '/terms': typeof TermsRoute
   '/categories/$category': typeof CategoriesCategoryRoute
   '/tools/$slug': typeof ToolsSlugRoute
@@ -115,11 +131,13 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/about': typeof AboutRoute
+  '/admin': typeof AdminRoute
   '/contact': typeof ContactRoute
   '/disclaimer': typeof DisclaimerRoute
   '/new': typeof NewRoute
   '/popular': typeof PopularRoute
   '/privacy': typeof PrivacyRoute
+  '/search': typeof SearchRoute
   '/terms': typeof TermsRoute
   '/categories/$category': typeof CategoriesCategoryRoute
   '/tools/$slug': typeof ToolsSlugRoute
@@ -131,11 +149,13 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/about'
+    | '/admin'
     | '/contact'
     | '/disclaimer'
     | '/new'
     | '/popular'
     | '/privacy'
+    | '/search'
     | '/terms'
     | '/categories/$category'
     | '/tools/$slug'
@@ -145,11 +165,13 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/about'
+    | '/admin'
     | '/contact'
     | '/disclaimer'
     | '/new'
     | '/popular'
     | '/privacy'
+    | '/search'
     | '/terms'
     | '/categories/$category'
     | '/tools/$slug'
@@ -159,11 +181,13 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/about'
+    | '/admin'
     | '/contact'
     | '/disclaimer'
     | '/new'
     | '/popular'
     | '/privacy'
+    | '/search'
     | '/terms'
     | '/categories/$category'
     | '/tools/$slug'
@@ -174,11 +198,13 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AboutRoute: typeof AboutRoute
+  AdminRoute: typeof AdminRoute
   ContactRoute: typeof ContactRoute
   DisclaimerRoute: typeof DisclaimerRoute
   NewRoute: typeof NewRoute
   PopularRoute: typeof PopularRoute
   PrivacyRoute: typeof PrivacyRoute
+  SearchRoute: typeof SearchRoute
   TermsRoute: typeof TermsRoute
   CategoriesCategoryRoute: typeof CategoriesCategoryRoute
   ToolsSlugRoute: typeof ToolsSlugRoute
@@ -200,6 +226,13 @@ declare module '@tanstack/react-router' {
       path: '/about'
       fullPath: '/about'
       preLoaderRoute: typeof AboutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin': {
+      id: '/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/contact': {
@@ -235,6 +268,13 @@ declare module '@tanstack/react-router' {
       path: '/privacy'
       fullPath: '/privacy'
       preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms': {
@@ -278,11 +318,13 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
+  AdminRoute: AdminRoute,
   ContactRoute: ContactRoute,
   DisclaimerRoute: DisclaimerRoute,
   NewRoute: NewRoute,
   PopularRoute: PopularRoute,
   PrivacyRoute: PrivacyRoute,
+  SearchRoute: SearchRoute,
   TermsRoute: TermsRoute,
   CategoriesCategoryRoute: CategoriesCategoryRoute,
   ToolsSlugRoute: ToolsSlugRoute,

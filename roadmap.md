@@ -1,5 +1,6 @@
-# DOVZO visual refinement
+# DOVZO frontend audit
 
-- [x] Audit content pages, shared navigation, search, cards, and all tool workspaces.
-- [x] Refine shared visual tokens, homepage composition, catalog, and tool workspace framing.
-- [x] Verify desktop/mobile pages and real search, text, image, and PDF flows.
+- [ ] Audit every route, navigation, links, and all 50 processing tools.
+- [ ] Repair validation, processing, output, and missing frontend pages without simulated success.
+- [ ] Verify all routes and real tool flows on desktop and mobile; run regression tests.
+- [x] Explain the recommended next step after remixing.

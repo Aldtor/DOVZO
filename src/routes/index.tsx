@@ -16,9 +16,9 @@ const faqs = [
   ["Is DOVZO free?", "Yes. Every tool is completely free. DOVZO is supported by ads only — there are no plans, credits or paywalls."],
   ["Do I need an account?", "No. Open a tool and use it straight away."],
   ["Are files uploaded to a server?", "No. Every tool runs inside your browser, so your files never leave your device."],
-  ["Does DOVZO work on mobile?", "Yes. All tools work on phones and tablets, although very large files process faster on a computer."],
+  ["Does DOVZO work on mobile?", "Most tools work on phones and tablets. Video recording and supported file codecs depend on your browser, and large files process faster on a computer."],
   ["What file formats are supported?", "Common formats like JPG, PNG, WebP, PDF, ZIP, MP3, WAV, MP4 and WebM. Each tool lists what it accepts."],
-  ["Are there usage limits?", "No artificial limits. The only limit is your device's memory for very large files."],
+  ["Are there usage limits?", "There are no paid quotas. Individual tools have practical limits, such as 15-second GIF clips, and large files depend on your device's memory."],
 ];
 
 function Home() {

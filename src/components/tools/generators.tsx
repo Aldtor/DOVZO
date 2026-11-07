@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import QRCode from "qrcode";
 import JsBarcode from "jsbarcode";
 import { RefreshCw } from "lucide-react";
+import { generatePassword, integerInRange } from "@/lib/tool-processing";
 import { Area, Btn, CopyBtn, DownloadBtn, ErrorNote, Field, Select, download, inputCls } from "./kit";
 
 export function QrCodeGenerator() {
@@ -10,9 +11,13 @@ export function QrCodeGenerator() {
   const [fg, setFg] = useState("#171a2b");
   const [bg, setBg] = useState("#ffffff");
   const [url, setUrl] = useState("");
+  const [error, setError] = useState("");
   useEffect(() => {
-    if (!text) return setUrl("");
-    QRCode.toDataURL(text, { width: size, margin: 2, color: { dark: fg, light: bg } }).then(setUrl).catch(() => setUrl(""));
+    let cancelled = false;
+    setUrl(""); setError("");
+    if (!text) return;
+    QRCode.toDataURL(text, { width: size, margin: 2, color: { dark: fg, light: bg } }).then((result) => { if (!cancelled) setUrl(result); }).catch(() => { if (!cancelled) setError("This content is too large for a QR code. Shorten it and try again."); });
+    return () => { cancelled = true; };
   }, [text, size, fg, bg]);
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_auto]">
@@ -24,6 +29,7 @@ export function QrCodeGenerator() {
           <Field label="Background"><input type="color" value={bg} onChange={(e) => setBg(e.target.value)} className="h-10 w-16 rounded-lg" /></Field>
         </div>
         {url && <DownloadBtn onClick={() => download(url, "dovzo-qr.png")}>Download PNG</DownloadBtn>}
+        {error && <ErrorNote>{error}</ErrorNote>}
       </div>
       <div className="grid h-64 w-64 place-items-center rounded-2xl bg-secondary p-4">{url ? <img src={url} alt="QR code preview" className="max-h-full" /> : <span className="text-sm text-muted-foreground">Enter content</span>}</div>
     </div>
@@ -37,10 +43,10 @@ export function BarcodeGenerator() {
   const ref = useRef<SVGSVGElement>(null);
   useEffect(() => {
     if (!ref.current) return;
-    try { JsBarcode(ref.current, text || " ", { format: fmt, displayValue: true, margin: 10 }); setErr(""); }
+    try { if (!text.trim()) throw new Error("Enter a value."); JsBarcode(ref.current, text, { format: fmt, displayValue: true, margin: 10 }); setErr(""); }
     catch { setErr(`"${text}" isn't valid for ${fmt}.`); }
   }, [text, fmt]);
-  const save = () => { const svg = new XMLSerializer().serializeToString(ref.current!); download(new Blob([svg], { type: "image/svg+xml" }), "barcode.svg"); };
+  const save = () => { if (!ref.current || err) return; const svg = new XMLSerializer().serializeToString(ref.current); download(new Blob([svg], { type: "image/svg+xml" }), "barcode.svg"); };
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap gap-3">
@@ -60,12 +66,7 @@ export function PasswordGenerator() {
   const [pw, setPw] = useState("");
   const gen = () => {
     const sets = [opt.upper && "ABCDEFGHJKLMNPQRSTUVWXYZ", opt.lower && "abcdefghijkmnopqrstuvwxyz", opt.digits && "23456789", opt.symbols && "!@#$%^&*()-_=+[]{};:,.?"].filter(Boolean) as string[];
-    if (!sets.length) return setPw("");
-    const all = sets.join(""); const r = new Uint32Array(len); crypto.getRandomValues(r);
-    const chars = [...r].map((x) => all[x % all.length]);
-    sets.forEach((s, i) => { if (i < len) chars[i] = s[r[i] % s.length]; });
-    for (let i = chars.length - 1; i > 0; i--) { const j = r[i] % (i + 1); [chars[i], chars[j]] = [chars[j], chars[i]]; }
-    setPw(chars.join(""));
+    setPw(generatePassword(len, sets));
   };
   useEffect(gen, [len, opt]);
   const pool = (opt.upper ? 24 : 0) + (opt.lower ? 25 : 0) + (opt.digits ? 8 : 0) + (opt.symbols ? 23 : 0);
@@ -87,6 +88,9 @@ export function RandomNumberGenerator() {
   const [min, setMin] = useState(1); const [max, setMax] = useState(100); const [n, setN] = useState(1); const [unique, setUnique] = useState(false);
   const [out, setOut] = useState<number[]>([]); const [err, setErr] = useState("");
   const gen = () => {
+    setOut([]);
+    try { integerInRange(min, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, "Minimum"); integerInRange(max, Number.MIN_SAFE_INTEGER, Number.MAX_SAFE_INTEGER, "Maximum"); integerInRange(n, 1, 1000, "Count"); if (!Number.isSafeInteger(max - min + 1)) throw new Error("Choose a smaller range."); }
+    catch (e) { return setErr((e as Error).message); }
     if (min > max) return setErr("Minimum must be less than maximum.");
     if (unique && n > max - min + 1) return setErr("Not enough unique numbers in that range.");
     setErr(""); const s = new Set<number>(); const r: number[] = [];

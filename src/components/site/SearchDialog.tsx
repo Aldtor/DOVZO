@@ -9,7 +9,8 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
   const [q, setQ] = useState("");
   const [idx, setIdx] = useState(0);
   const nav = useNavigate();
-  const results = q.trim() ? searchTools(q).slice(0, 8) : popularTools.slice(0, 6);
+  const matches = q.trim() ? searchTools(q) : popularTools.slice(0, 6);
+  const results = matches.slice(0, 8);
   useEffect(() => { if (open) { setQ(""); setIdx(0); } }, [open]);
   const go = (slug: string) => { onClose(); nav({ to: "/tools/$slug", params: { slug } }); };
 
@@ -28,7 +29,7 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
             }} placeholder="Search 50 tools…" className="h-16 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground" />
         </div>
         <div className="max-h-[min(60dvh,520px)] overflow-y-auto p-2">
-          <p className="px-3 py-3 text-xs font-medium text-muted-foreground">{q.trim() ? `${results.length} matching tools` : "Popular tools"}</p>
+          <p className="px-3 py-3 text-xs font-medium text-muted-foreground">{q.trim() ? `${matches.length} matching tools` : "Popular tools"}</p>
           <div id="tool-search-results" role="listbox" aria-label="Tools">
             {results.length === 0 && <div className="flex flex-col items-center gap-3 px-4 py-10 text-center"><SearchX className="h-6 w-6 text-muted-foreground" /><p className="text-sm font-medium">No tools found</p><p className="text-xs text-muted-foreground">Try a different search.</p></div>}
             {results.map((r, i) => {
@@ -43,6 +44,7 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
               </Button>;
             })}
           </div>
+          {matches.length > results.length && <Button variant="ghost" className="mt-2 w-full" onClick={() => { onClose(); void nav({ to: "/search", search: { q } }); }}>View all {matches.length} results</Button>}
         </div>
       </DialogContent>
     </Dialog>

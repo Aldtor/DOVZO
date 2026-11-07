@@ -54,6 +54,7 @@ function SinglePdf({ children }: { children: (f: File, doc: PDFDocument, reset: 
 }
 
 export function parseRanges(s: string, max: number): number[] {
+  if (!s.trim()) throw new Error("Enter at least one page or range.");
   const out: number[] = [];
   for (const part of s.split(",").map((x) => x.trim()).filter(Boolean)) {
     const m = part.match(/^(\d+)(?:\s*-\s*(\d+))?$/); if (!m) throw new Error(`"${part}" isn't a valid page or range.`);
@@ -61,6 +62,7 @@ export function parseRanges(s: string, max: number): number[] {
     if (a < 1 || b > max || a > b) throw new Error(`Pages must be between 1 and ${max}.`);
     for (let i = a; i <= b; i++) out.push(i - 1);
   }
+  if (!out.length) throw new Error("Enter at least one page or range.");
   return out;
 }
 
@@ -155,15 +157,16 @@ export function PdfToImages() {
     for (let i = 1; i <= doc.numPages; i++) {
       const page = await doc.getPage(i); const vp = page.getViewport({ scale: +scale });
       const c = document.createElement("canvas"); c.width = vp.width; c.height = vp.height;
-      await page.render({ canvas: c, canvasContext: c.getContext("2d")!, viewport: vp }).promise;
+      const ctx = c.getContext("2d"); if (!ctx) throw new Error("Canvas processing is unavailable.");
+      await page.render({ canvas: c, canvasContext: ctx, viewport: vp }).promise;
       out.push(c.toDataURL("image/png")); setPages([...out]);
     }
   });
-  const zipAll = async () => { const z = new JSZip(); pages.forEach((p, i) => z.file(`page-${i + 1}.png`, p.split(",")[1], { base64: true })); download(await z.generateAsync({ type: "blob" }), `${baseName(f!.name)}-images.zip`); };
+  const zipAll = () => run(async () => { if (!f) return; const z = new JSZip(); pages.forEach((p, i) => z.file(`page-${i + 1}.png`, p.split(",")[1], { base64: true })); download(await z.generateAsync({ type: "blob" }), `${baseName(f.name)}-images.zip`); });
   return (
     <div className="space-y-4">
       <div className="flex items-end gap-3"><Field label="Resolution"><Select value={scale} onChange={setScale} options={[["1", "Standard (72 dpi)"], ["2", "High (144 dpi)"], ["3", "Print (216 dpi)"]]} /></Field></div>
-      <FileDrop accept="application/pdf" onFiles={(fs) => fs[0] && convert(fs[0])} />
+      <FileDrop accept="application/pdf" disabled={busy} onFiles={async (fs) => { if (fs[0]) await convert(fs[0]); }} />
       {err && <ErrorNote>{err}</ErrorNote>}
       {busy && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Rendering page {pages.length + 1}…</p>}
       {pages.length > 0 && !busy && <DownloadBtn onClick={zipAll}>Download all ({pages.length}) as ZIP</DownloadBtn>}
