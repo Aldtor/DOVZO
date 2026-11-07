@@ -76,10 +76,10 @@ function Home() {
       <Section title="Browse categories" link={{ to: "/categories", label: "All categories" }}>
         <div className="grid gap-4 md:grid-cols-3">
           {categories.map((c, i) => (
-            <Link key={c.id} to="/categories/$category" params={{ category: c.id }} className={`bento bento-hover flex flex-col gap-4 p-6 ${i === 0 ? "md:row-span-2" : ""}`}>
+            <Link key={c.id} to="/categories/$category" params={{ category: c.id }} className={`bento bento-hover flex flex-col gap-4 p-6`}>
               <div className="flex items-center justify-between"><span className={`grid h-12 w-12 place-items-center rounded-xl ${toneClass[c.tone]}`}><c.icon className="h-6 w-6" /></span><span className="text-sm text-muted-foreground">{toolsIn(c.id).length} tools</span></div>
               <div><h3 className="text-lg font-semibold">{c.name}</h3><p className="mt-1 text-sm text-muted-foreground">{c.description}</p></div>
-              {i === 0 && <ul className="mt-auto space-y-2 text-sm">{toolsIn(c.id).slice(0, 6).map((t) => <li key={t.slug} className="flex items-center gap-2 text-muted-foreground"><t.icon className="h-4 w-4" />{t.name}</li>)}</ul>}
+              
             </Link>
           ))}
         </div>
