@@ -1,5 +1,4 @@
 import { Link } from "@tanstack/react-router";
-import { AtSign, Rss } from "lucide-react";
 import { Logo } from "./Logo";
 import { categories } from "@/lib/tools";
 
@@ -10,10 +9,6 @@ export function Footer() {
         <div className="col-span-2 space-y-3 md:col-span-1">
           <Logo />
           <p className="text-sm text-muted-foreground">Free everyday utilities that run in your browser. No accounts, no paywalls.</p>
-          <div className="flex gap-2 text-muted-foreground">
-            <a href="#" aria-label="Social profile" className="rounded-lg p-2 hover:bg-secondary"><AtSign className="h-4 w-4" /></a>
-            <a href="#" aria-label="Blog" className="rounded-lg p-2 hover:bg-secondary"><Rss className="h-4 w-4" /></a>
-          </div>
         </div>
         <FooterCol title="Explore">
           <Link to="/tools">All Tools</Link>

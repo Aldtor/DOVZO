@@ -54,7 +54,7 @@ function Home() {
             </div>
           </div>
           {/* Bento preview */}
-          <div className="grid grid-cols-2 gap-3 self-center">
+          <div className="grid grid-cols-2 gap-3 self-center max-sm:[&>a]:min-h-28 max-sm:[&>a]:row-span-1 max-sm:[&>a]:gap-3 max-sm:[&>a]:p-4 max-sm:[&>a>div>p+ p]:hidden">
             {featured.map((t, i) => {
               const cat = categories.find((c) => c.id === t.category);
               if (!cat) return null;
