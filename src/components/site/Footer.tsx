@@ -5,9 +5,9 @@ import { categories } from "@/lib/tools";
 
 export function Footer() {
   return (
-    <footer className="mt-24 border-t border-border bg-card/50">
-      <div className="mx-auto grid max-w-6xl gap-10 px-6 py-14 md:grid-cols-4">
-        <div className="space-y-3">
+    <footer className="mt-16 border-t border-border bg-card/50">
+      <div className="mx-auto grid max-w-6xl grid-cols-2 gap-x-6 gap-y-8 px-5 py-10 sm:px-6 md:grid-cols-4">
+        <div className="col-span-2 space-y-3 md:col-span-1">
           <Logo />
           <p className="text-sm text-muted-foreground">Free everyday utilities that run in your browser. No accounts, no paywalls.</p>
           <div className="flex gap-2 text-muted-foreground">
@@ -35,7 +35,7 @@ export function Footer() {
         </FooterCol>
       </div>
       <div className="border-t border-border">
-        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-6 py-5 text-xs text-muted-foreground">
+        <div className="mx-auto flex max-w-6xl flex-wrap justify-between gap-2 px-5 py-5 sm:px-6 text-xs text-muted-foreground">
           <span>© {new Date().getFullYear()} DOVZO. Every tool is free, forever.</span>
           <span className="font-medium">Tools. No fuss.</span>
         </div>
@@ -48,7 +48,7 @@ function FooterCol({ title, children }: { title: string; children: React.ReactNo
   return (
     <div>
       <h4 className="mb-3 text-sm font-semibold">{title}</h4>
-      <div className="flex flex-col gap-2 text-sm text-muted-foreground [&>a:hover]:text-foreground">{children}</div>
+      <div className="flex flex-col gap-2 text-sm leading-6 text-muted-foreground [&>a:hover]:text-foreground">{children}</div>
     </div>
   );
 }

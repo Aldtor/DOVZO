@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu, Moon, Search, Sun, X } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
 import { SearchDialog } from "./SearchDialog";
 
@@ -35,10 +36,10 @@ export function Header() {
 
   return (
     <>
-      <header className="sticky top-3 z-40 mx-auto mt-3 w-[calc(100%-1.5rem)] max-w-6xl">
-        <div className="glass flex h-14 items-center gap-4 rounded-2xl px-4 shadow-soft">
+      <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
+        <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-5 sm:px-6">
           <Logo />
-          <nav className="ml-4 hidden items-center gap-1 md:flex">
+          <nav className="ml-6 hidden items-center gap-1 md:flex">
             {nav.map((n) => (
               <Link key={n.to} to={n.to} activeOptions={{ exact: n.to === "/" }}
                 className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
@@ -48,22 +49,22 @@ export function Header() {
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-1">
-            <button onClick={() => setSearch(true)} className="hidden items-center gap-2 rounded-lg border border-border bg-card/60 px-3 py-1.5 text-sm text-muted-foreground sm:flex">
-              <Search className="h-4 w-4" /> Search <kbd className="ml-4 text-xs">⌘K</kbd>
-            </button>
-            <button onClick={() => setSearch(true)} className="grid h-9 w-9 place-items-center rounded-lg sm:hidden" aria-label="Search"><Search className="h-4 w-4" /></button>
-            <button onClick={toggle} className="grid h-9 w-9 place-items-center rounded-lg hover:bg-secondary" aria-label="Toggle theme">
+            <Button variant="ghost" onClick={() => setSearch(true)} className="hidden h-9 items-center gap-2 border border-border bg-card/60 px-3 text-sm text-muted-foreground sm:flex">
+              <Search className="h-4 w-4" /> Search <kbd className="ml-5 font-mono text-[10px]">⌘K</kbd>
+            </Button>
+            <Button variant="ghost" onClick={() => setSearch(true)} className="grid h-9 w-9 place-items-center rounded-lg sm:hidden" aria-label="Search"><Search className="h-4 w-4" /></Button>
+            <Button variant="ghost" onClick={toggle} className="grid h-9 w-9 place-items-center rounded-lg hover:bg-secondary" title={dark ? "Switch to light theme" : "Switch to dark theme"} aria-label="Toggle theme">
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
-            </button>
-            <button onClick={() => setMenu(!menu)} className="grid h-9 w-9 place-items-center rounded-lg md:hidden" aria-label="Menu">
+            </Button>
+            <Button variant="ghost" onClick={() => setMenu(!menu)} className="grid h-9 w-9 place-items-center rounded-lg md:hidden" aria-label="Menu" aria-expanded={menu} aria-controls="mobile-navigation">
               {menu ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
-            </button>
+            </Button>
           </div>
         </div>
         {menu && (
-          <nav className="glass mt-2 flex flex-col rounded-2xl p-2 shadow-soft md:hidden">
+          <nav id="mobile-navigation" className="mx-5 mb-3 flex flex-col gap-1 border-t border-border pt-3 md:hidden">
             {nav.map((n) => (
-              <Link key={n.to} to={n.to} onClick={() => setMenu(false)} className="rounded-lg px-3 py-2.5 text-sm">{n.label}</Link>
+              <Link key={n.to} to={n.to} onClick={() => setMenu(false)} activeOptions={{ exact: n.to === "/" }} activeProps={{ className: "bg-secondary text-foreground" }} className="rounded-lg px-3 py-2.5 text-sm">{n.label}</Link>
             ))}
           </nav>
         )}
