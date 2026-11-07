@@ -9,7 +9,6 @@ function useImage() {
   const [err, setErr] = useState("");
   const pick = async (fs: File[]) => {
     const f = fs[0]; if (!f) return;
-    if (!f.type.startsWith("image/")) return setErr("Please choose an image file.");
     try { setImg(await loadImage(f)); setFile(f); setErr(""); } catch (e) { setErr((e as Error).message); }
   };
   return { file, img, err, pick, reset: () => { setFile(null); setImg(null); } };
@@ -17,20 +16,21 @@ function useImage() {
 
 type Draw = (img: HTMLImageElement) => HTMLCanvasElement;
 function render(img: HTMLImageElement, w: number, h: number, fn?: (ctx: CanvasRenderingContext2D) => void) {
-  const c = document.createElement("canvas"); c.width = w; c.height = h;
   integerInRange(w, 1, 10000, "Width"); integerInRange(h, 1, 10000, "Height");
   if (w * h > 40000000) throw new Error("The result exceeds 40 megapixels. Choose smaller dimensions.");
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
   const ctx = c.getContext("2d");
   if (!ctx) throw new Error("Canvas processing is unavailable in this browser.");
   if (fn) fn(ctx); else ctx.drawImage(img, 0, 0, w, h);
   return c;
 }
 
-function ImageTool({ controls, draw, type, quality, suffix }: { controls?: (img: HTMLImageElement) => React.ReactNode; draw: Draw; type?: string; quality?: number; suffix: string }) {
+function ImageTool({ controls, draw, type, quality, suffix, onImage }: { controls?: (img: HTMLImageElement) => React.ReactNode; draw: Draw; type?: string; quality?: number; suffix: string; onImage?: (img: HTMLImageElement) => void }) {
   const { file, img, err, pick, reset } = useImage();
   const [out, setOut] = useState<{ blob: Blob; url: string } | null>(null);
   const [processingError, setProcessingError] = useState("");
   const outputUrl = useRef("");
+  useEffect(() => { if (img) onImage?.(img); }, [img, onImage]);
   useEffect(() => () => { if (outputUrl.current) URL.revokeObjectURL(outputUrl.current); }, []);
   useEffect(() => {
     setOut(null); setProcessingError("");
@@ -50,7 +50,7 @@ function ImageTool({ controls, draw, type, quality, suffix }: { controls?: (img:
       } catch (e) { if (!cancel) setProcessingError(e instanceof Error ? e.message : "Image export failed."); }
     })();
     function done(b: Blob) { if (!cancel) { outputUrl.current = URL.createObjectURL(b); setOut({ blob: b, url: outputUrl.current }); } }
-    return () => { cancel = true; };
+    return () => { cancel = true; clearTimeout(debounce); };
   }, [img, file, draw, type, quality]);
   if (!img || !file) return <div className="space-y-3"><FileDrop accept="image/*" onFiles={pick} />{err && <ErrorNote>{err}</ErrorNote>}</div>;
   return (

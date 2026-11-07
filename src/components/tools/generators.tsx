@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import QRCode from "qrcode";
-import JsBarcode from "jsbarcode";
+import { Button } from "@/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import { generatePassword, integerInRange } from "@/lib/tool-processing";
 import { Area, Btn, CopyBtn, DownloadBtn, ErrorNote, Field, Select, download, inputCls } from "./kit";
@@ -16,8 +15,8 @@ export function QrCodeGenerator() {
     let cancelled = false;
     setUrl(""); setError("");
     if (!text) return;
-    QRCode.toDataURL(text, { width: size, margin: 2, color: { dark: fg, light: bg } }).then((result) => { if (!cancelled) setUrl(result); }).catch(() => { if (!cancelled) setError("This content is too large for a QR code. Shorten it and try again."); });
-    return () => { cancelled = true; };
+    const timer = setTimeout(() => { void import("qrcode").then(({ default: QRCode }) => QRCode.toDataURL(text, { width: size, margin: 2, color: { dark: fg, light: bg } })).then((result) => { if (!cancelled) setUrl(result); }).catch(() => { if (!cancelled) setError("This content is too large for a QR code. Shorten it and try again."); }); }, 150);
+    return () => { cancelled = true; clearTimeout(timer); };
   }, [text, size, fg, bg]);
   return (
     <div className="grid gap-6 md:grid-cols-[1fr_auto]">
@@ -41,10 +40,15 @@ export function BarcodeGenerator() {
   const [fmt, setFmt] = useState("CODE128");
   const [err, setErr] = useState("");
   const ref = useRef<SVGSVGElement>(null);
+  const [ready, setReady] = useState(false);
   useEffect(() => {
-    if (!ref.current) return;
-    try { if (!text.trim()) throw new Error("Enter a value."); JsBarcode(ref.current, text, { format: fmt, displayValue: true, margin: 10 }); setErr(""); }
-    catch { setErr(`"${text}" isn't valid for ${fmt}.`); }
+    let cancelled = false; setReady(false); setErr("");
+    void import("jsbarcode").then(({ default: JsBarcode }) => {
+      if (cancelled || !ref.current) return;
+      if (!text.trim()) throw new Error("Enter a value.");
+      JsBarcode(ref.current, text, { format: fmt, displayValue: true, margin: 10 }); setReady(true);
+    }).catch(() => { if (!cancelled) setErr(`"${text}" isn't valid for ${fmt}.`); });
+    return () => { cancelled = true; };
   }, [text, fmt]);
   const save = () => { if (!ref.current || err) return; const svg = new XMLSerializer().serializeToString(ref.current); download(new Blob([svg], { type: "image/svg+xml" }), "barcode.svg"); };
   return (
@@ -54,8 +58,8 @@ export function BarcodeGenerator() {
         <Field label="Format"><Select value={fmt} onChange={setFmt} options={[["CODE128", "CODE128"], ["CODE39", "CODE39"], ["EAN13", "EAN-13"], ["EAN8", "EAN-8"], ["UPC", "UPC-A"], ["ITF14", "ITF-14"]]} /></Field>
       </div>
       {err && <ErrorNote>{err}</ErrorNote>}
-      <div className="overflow-x-auto rounded-2xl bg-card p-4 ring-1 ring-border"><svg ref={ref} className={err ? "opacity-20" : ""} /></div>
-      {!err && <DownloadBtn onClick={save}>Download SVG</DownloadBtn>}
+      <div className="overflow-x-auto rounded-2xl bg-card p-4 ring-1 ring-border"><svg ref={ref} role="img" aria-label="Barcode preview" className={ready ? "" : "invisible"} /></div>
+      {ready && <DownloadBtn onClick={save}>Download SVG</DownloadBtn>}
     </div>
   );
 }
@@ -116,18 +120,20 @@ export function RandomNumberGenerator() {
 const rndHex = () => "#" + [0, 0, 0].map(() => Math.floor(Math.random() * 256).toString(16).padStart(2, "0")).join("");
 export function RandomColorGenerator() {
   const [cols, setCols] = useState<string[]>([]);
+  const [error, setError] = useState(""); const [copied, setCopied] = useState("");
   useEffect(() => setCols(Array.from({ length: 5 }, rndHex)), []);
   const rgb = (h: string) => `rgb(${parseInt(h.slice(1, 3), 16)}, ${parseInt(h.slice(3, 5), 16)}, ${parseInt(h.slice(5, 7), 16)})`;
   return (
     <div className="space-y-4">
       <Btn onClick={() => setCols(Array.from({ length: 5 }, rndHex))}><RefreshCw className="h-4 w-4" /> New palette</Btn>
       <div className="grid gap-3 sm:grid-cols-5">{cols.map((c, i) => (
-        <button key={i} onClick={() => navigator.clipboard.writeText(c)} className="overflow-hidden rounded-2xl ring-1 ring-border text-left" title="Click to copy">
+        <Button variant="ghost" key={i} onClick={async () => { try { await navigator.clipboard.writeText(c); setCopied(c); setError(""); } catch { setError("Copy failed. Select and copy the HEX value manually."); } }} className="block h-auto overflow-hidden rounded-lg p-0 ring-1 ring-border text-left" title="Copy HEX code" aria-label={`Copy ${c}`}>
           <div className="h-32" style={{ background: c }} />
           <div className="p-3"><div className="font-mono text-sm font-semibold uppercase">{c}</div><div className="text-xs text-muted-foreground">{rgb(c)}</div></div>
-        </button>
+        </Button>
       ))}</div>
-      <p className="text-xs text-muted-foreground">Click a swatch to copy its HEX code.</p>
+      {copied && <p role="status" className="text-xs text-muted-foreground">Copied {copied}</p>}
+      {error && <ErrorNote>{error}</ErrorNote>}
     </div>
   );
 }
