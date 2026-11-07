@@ -86,11 +86,11 @@ function encodeWav(buf: AudioBuffer, start: number, end: number) {
   return new Blob([out], { type: "audio/wav" });
 }
 
-function RangeControls({ dur, a, b, setA, setB }: { dur: number; a: number; b: number; setA: (n: number) => void; setB: (n: number) => void }) {
+function RangeControls({ dur, a, b, setA, setB, disabled = false }: { disabled?: boolean; dur: number; a: number; b: number; setA: (n: number) => void; setB: (n: number) => void }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <Field label={`Start ${a.toFixed(1)}s`}><input type="range" min={0} max={dur} step={0.01} value={a} onChange={(e) => setA(Math.max(0, Math.min(+e.target.value, b - Math.min(0.01, dur / 2))))} /></Field>
-      <Field label={`End ${b.toFixed(1)}s`}><input type="range" min={0} max={dur} step={0.01} value={b} onChange={(e) => setB(Math.min(dur, Math.max(+e.target.value, a + Math.min(0.01, dur / 2))))} /></Field>
+      <Field label={`Start ${a.toFixed(1)}s`}><input type="range" disabled={disabled} min={0} max={dur} step={0.01} value={a} onChange={(e) => setA(Math.max(0, Math.min(+e.target.value, b - Math.min(0.01, dur / 2))))} /></Field>
+      <Field label={`End ${b.toFixed(1)}s`}><input type="range" disabled={disabled} min={0} max={dur} step={0.01} value={b} onChange={(e) => setB(Math.min(dur, Math.max(+e.target.value, a + Math.min(0.01, dur / 2))))} /></Field>
     </div>
   );
 }
@@ -138,6 +138,7 @@ export function VideoFrameExtractor() {
   useEffect(() => () => urls.current.forEach((url) => URL.revokeObjectURL(url)), []);
   const grab = async () => {
     const el = v.ref.current; if (!el || !v.ready || el.readyState < 2) return;
+    if (el.videoWidth * el.videoHeight > 40000000 || frames.length >= 100) { setError("Choose a video under 40 megapixels and capture up to 100 frames per session."); return; }
     const c = document.createElement("canvas"); c.width = el.videoWidth; c.height = el.videoHeight;
     try { const ctx = c.getContext("2d"); if (!ctx) throw new Error("Canvas processing unavailable."); ctx.drawImage(el, 0, 0); const t = el.currentTime; const blob = await canvasBlob(c); if (v.abort.current.signal.aborted) return; const url = URL.createObjectURL(blob); urls.current.push(url); setFrames((f) => [...f, { t, url }]); setError(""); }
     catch { setError("The frame could not be exported."); } finally { c.width = 0; c.height = 0; }
@@ -166,6 +167,7 @@ export function VideoTrimmer() {
       validateClip(a, b, v.dur);
       el.pause();
       await seek(el, a);
+      if (v.abort.current.signal.aborted) return;
       stream = (el as HTMLVideoElement & { captureStream(): MediaStream }).captureStream();
       const mimeType = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((type) => MediaRecorder.isTypeSupported(type));
       if (!mimeType) throw new Error("WebM recording is unsupported.");
@@ -186,7 +188,7 @@ export function VideoTrimmer() {
     <div className="space-y-4">
       <video ref={v.ref} src={v.url} controls={!busy} playsInline onLoadedData={(e) => { v.loaded(e.currentTarget); setA(0); setB(e.currentTarget.duration); }} onError={v.fail} className="max-h-96 w-full rounded-2xl bg-foreground" />
       {v.error && <ErrorNote>{v.error}</ErrorNote>}
-      {v.dur > 0 && <RangeControls dur={v.dur} a={a} b={b} setA={setA} setB={setB} />}
+      {v.dur > 0 && <RangeControls disabled={!!busy} dur={v.dur} a={a} b={b} setA={setA} setB={setB} />}
       <p className="text-xs text-muted-foreground">The clip is recorded in real time (a {(b - a).toFixed(1)}s clip takes {(b - a).toFixed(1)}s) and saved as WebM.</p>
       {err && <ErrorNote>{err}</ErrorNote>}
       <div className="flex gap-3"><Btn disabled={busy || !v.ready} onClick={trim}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}{busy ? "Recording…" : "Trim & download"}</Btn><Btn variant="ghost" disabled={busy} onClick={() => { setA(0); setB(0); setErr(""); v.reset(); }}>Choose another</Btn></div>
@@ -202,11 +204,13 @@ export function VideoToGif() {
   const make = async () => {
     const el = v.ref.current; if (!el || !v.ready) return;
     setBusy("Preparing…"); setErr(""); setOut("");
+    let canvas: HTMLCanvasElement | undefined;
     try {
     validateClip(a, b, v.dur, 15); el.pause();
     const { GIFEncoder, quantize, applyPalette } = await import("gifenc");
     const h = Math.round((el.videoHeight / el.videoWidth) * width);
-    const c = document.createElement("canvas"); c.width = width; c.height = h; const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (width * h > 4000000) throw new Error("The GIF frame is too large. Choose a smaller width.");
+    const c = document.createElement("canvas"); canvas = c; c.width = width; c.height = h; const ctx = c.getContext("2d", { willReadFrequently: true });
     if (!ctx) throw new Error("Canvas processing is unavailable.");
     const gif = GIFEncoder(); const n = Math.max(1, Math.round((b - a) * fps));
     for (let i = 0; i < n; i++) {
@@ -215,14 +219,14 @@ export function VideoToGif() {
       const data = ctx.getImageData(0, 0, width, h).data; const pal = quantize(data, 256); gif.writeFrame(applyPalette(data, pal), width, h, { palette: pal, delay: 1000 / fps });
     }
     gif.finish(); if (v.abort.current.signal.aborted) return; c.width = 0; c.height = 0; setOut(URL.createObjectURL(new Blob([gif.bytes() as BlobPart], { type: "image/gif" })));
-    } catch (e) { if (!v.abort.current.signal.aborted) setErr(e instanceof Error ? e.message : "GIF creation failed."); } finally { if (!v.abort.current.signal.aborted) setBusy(""); }
+    } catch (e) { if (!v.abort.current.signal.aborted) setErr(e instanceof Error ? e.message : "GIF creation failed."); } finally { if (canvas) { canvas.width = 0; canvas.height = 0; } if (!v.abort.current.signal.aborted) setBusy(""); }
   };
   if (!v.url) return <FileDrop accept="video/*" onFiles={v.pick} />;
   return (
     <div className="space-y-4">
       <video ref={v.ref} src={v.url} controls={!busy} muted playsInline onLoadedData={(e) => { v.loaded(e.currentTarget); setA(0); setB(Math.min(3, e.currentTarget.duration)); }} onError={v.fail} className="max-h-80 w-full rounded-2xl bg-foreground" />
       {(err || v.error) && <ErrorNote>{err || v.error}</ErrorNote>}
-      {v.dur > 0 && <RangeControls dur={v.dur} a={a} b={b} setA={(x) => { setA(x); setB((end) => Math.min(end, x + 15)); setOut(""); }} setB={(x) => { setB(Math.min(x, a + 15)); setOut(""); }} />}
+      {v.dur > 0 && <RangeControls disabled={!!busy} dur={v.dur} a={a} b={b} setA={(x) => { setA(x); setB((end) => Math.min(end, x + 15)); setOut(""); }} setB={(x) => { setB(Math.min(x, a + 15)); setOut(""); }} />}
       <div className="flex flex-wrap gap-4">
         <Field label={`FPS ${fps}`}><input type="range" min={5} max={20} value={fps} disabled={!!busy} onChange={(e) => { setFps(+e.target.value); setOut(""); }} /></Field>
         <Field label={`Width ${width}px`}><input type="range" min={160} max={800} step={20} value={width} disabled={!!busy} onChange={(e) => { setWidth(+e.target.value); setOut(""); }} /></Field>
