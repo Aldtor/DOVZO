@@ -3,7 +3,7 @@ import { tools, categories, getTool, searchTools } from "@/lib/tools";
 import { toolComponents } from "@/components/tools/registry";
 import { acceptsFile } from "@/components/tools/kit";
 import { parseRanges } from "@/components/tools/pdf";
-import { decodeBase64, encodeBase64, integerInRange, uniqueArchiveName, validateClip, generatePassword } from "@/lib/tool-processing";
+import { decodeBase64, encodeBase64, integerInRange, uniqueArchiveName, validateClip, generatePassword, validateFileBudget } from "@/lib/tool-processing";
 
 describe("DOVZO catalog integrity", () => {
   it("provides exactly 50 unique registered tools", () => {
@@ -20,6 +20,10 @@ describe("DOVZO catalog integrity", () => {
 });
 
 describe("Real processing validation", () => {
+  it("enforces the 100 MiB browser file budget across combined files", () => {
+    expect(() => validateFileBudget([{ size: 100 * 1024 * 1024 }])).not.toThrow();
+    expect(() => validateFileBudget([{ size: 60 * 1024 * 1024 }, { size: 41 * 1024 * 1024 }])).toThrow();
+  });
   it("accepts only supported upload formats", () => {
     expect(acceptsFile(new File(["x"], "data.txt", { type: "text/plain" }), "image/*")).toBe(false);
     expect(acceptsFile(new File(["x"], "DATA.PDF"), "application/pdf")).toBe(true);

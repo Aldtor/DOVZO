@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import type { PDFDocument } from "pdf-lib";
+import { MAX_BROWSER_BYTES, validateFileBudget } from "@/lib/tool-processing";
 import { ArrowDown, ArrowUp, FileText, Loader2, X } from "lucide-react";
 
 import { Btn, DownloadBtn, ErrorNote, FileDrop, Field, Select, baseName, canvasBlob, download, fmtBytes, inputCls } from "./kit";
@@ -34,6 +35,7 @@ export function PdfMerger() {
   const [files, setFiles] = useState<File[]>([]);
   const { busy, err, run } = useBusy();
   const merge = () => run(async () => {
+    validateFileBudget(files);
     const { PDFDocument } = await import("pdf-lib"); const out = await PDFDocument.create();
     for (const f of files) { const d = await loadPdf(f); (await out.copyPages(d, d.getPageIndices())).forEach((p) => out.addPage(p)); }
     download(toBlob(await out.save()), "merged.pdf");
@@ -125,6 +127,7 @@ export function PdfCompressor() {
 export function ImagesToPdf() {
   const [files, setFiles] = useState<File[]>([]); const { busy, err, run } = useBusy();
   const make = () => run(async () => {
+    validateFileBudget(files);
     const { PDFDocument } = await import("pdf-lib"); const out = await PDFDocument.create();
     for (const f of files) {
       const bytes = await f.arrayBuffer();
@@ -163,7 +166,7 @@ export function PdfToImages() {
     pdfjs.GlobalWorkerOptions.workerSrc = worker;
     const task = pdfjs.getDocument({ data: await file.arrayBuffer() });
     cancel.current = () => { void task.destroy(); };
-    const out: { url: string; blob: Blob }[] = [];
+    const out: { url: string; blob: Blob }[] = []; let bytes = 0;
     try {
       const doc = await task.promise;
       for (let i = 1; i <= doc.numPages && id === generation.current; i++) {
@@ -175,6 +178,7 @@ export function PdfToImages() {
           await page.render({ canvas: c, canvasContext: ctx, viewport: vp }).promise;
           const blob = await canvasBlob(c);
           if (id !== generation.current) break;
+          bytes += blob.size; if (bytes > MAX_BROWSER_BYTES) throw new Error("Rendered pages exceed 100 MiB. Use a lower resolution or split the PDF first.");
           const url = URL.createObjectURL(blob); urls.current.push(url); out.push({ url, blob }); setPages([...out]);
         } finally { page.cleanup(); c.width = 0; c.height = 0; }
       }

@@ -3,13 +3,13 @@ import type JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { waitForClip } from "@/lib/media-lifecycle";
 import { File as FileIcon, Loader2, X } from "lucide-react";
-import { uniqueArchiveName, validateClip } from "@/lib/tool-processing";
+import { MAX_BROWSER_BYTES, uniqueArchiveName, validateClip, validateFileBudget } from "@/lib/tool-processing";
 import { Btn, DownloadBtn, ErrorNote, FileDrop, Field, Stat, baseName, canvasBlob, download, fmtBytes, inputCls } from "./kit";
 
 export function ZipCreator() {
   const [files, setFiles] = useState<File[]>([]); const [name, setName] = useState("archive"); const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const make = async () => { setBusy(true); setErr(""); try { const { default: JSZip } = await import("jszip"); const z = new JSZip(); const used = new Set<string>(); files.forEach((f) => z.file(uniqueArchiveName(f.name, used), f)); download(await z.generateAsync({ type: "blob", compression: "DEFLATE" }), `${name || "archive"}.zip`); } catch { setErr("The ZIP could not be created. Try fewer or smaller files."); } finally { setBusy(false); } };
+  const make = async () => { setBusy(true); setErr(""); try { validateFileBudget(files); const { default: JSZip } = await import("jszip"); const z = new JSZip(); const used = new Set<string>(); files.forEach((f) => z.file(uniqueArchiveName(f.name, used), f)); download(await z.generateAsync({ type: "blob", compression: "DEFLATE" }), `${name || "archive"}.zip`); } catch (e) { setErr(e instanceof Error ? e.message : "The ZIP could not be created. Try fewer or smaller files."); } finally { setBusy(false); } };
   const total = files.reduce((s, f) => s + f.size, 0);
   return (
     <div className="space-y-4">
@@ -23,16 +23,29 @@ export function ZipCreator() {
 
 export function ZipExtractor() {
   const [entries, setEntries] = useState<JSZip.JSZipObject[]>([]); const [err, setErr] = useState(""); const [zipName, setZipName] = useState("");
+  const [extracting, setExtracting] = useState(false);
+  const extract = async (entry: JSZip.JSZipObject) => {
+    setExtracting(true); setErr("");
+    try {
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const chunks: Uint8Array[] = []; let bytes = 0;
+        const stream = entry.internalStream("uint8array");
+        stream.on("data", (chunk) => { bytes += chunk.length; if (bytes > MAX_BROWSER_BYTES) { stream.pause(); reject(new Error("This extracted file exceeds 100 MiB.")); return; } chunks.push(chunk); });
+        stream.on("error", reject); stream.on("end", () => resolve(new Blob(chunks as BlobPart[]))); stream.resume();
+      });
+      download(blob, entry.name.split("/").pop() ?? "file");
+    } catch (e) { setErr(e instanceof Error ? e.message : "The ZIP entry could not be extracted."); } finally { setExtracting(false); }
+  };
   const open = async (fs: File[]) => { const f = fs[0]; if (!f) return; setEntries([]); setZipName(""); try { const { default: JSZip } = await import("jszip"); const z = await JSZip.loadAsync(f); setEntries(Object.values(z.files).filter((e) => !e.dir)); setZipName(f.name); setErr(""); } catch { setErr("That file isn't a readable ZIP archive."); } };
   return (
     <div className="space-y-4">
-      <FileDrop accept=".zip,application/zip" onFiles={open} label="Drop a ZIP file" />
+      <FileDrop accept=".zip,application/zip" disabled={extracting} onFiles={open} label="Drop a ZIP file" />
       {err && <ErrorNote>{err}</ErrorNote>}
       {entries.length > 0 && <p className="text-sm text-muted-foreground">{zipName} · {entries.length} files</p>}
       {zipName && !entries.length && <p role="status" className="text-sm text-muted-foreground">This ZIP contains no files.</p>}
       <div className="space-y-2">{entries.map((e) => (
         <div key={e.name} className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2 text-sm"><FileIcon className="h-4 w-4" /><span className="flex-1 truncate font-mono text-xs">{e.name}</span>
-          <Btn variant="ghost" onClick={async () => { try { download(await e.async("blob"), e.name.split("/").pop() ?? "file"); } catch { setErr(`Could not extract ${e.name}. The entry may be damaged.`); } }}>Download</Btn></div>
+          <Btn variant="ghost" disabled={extracting} onClick={() => extract(e)} aria-label={`Download ${e.name}`}>Download</Btn></div>
       ))}</div>
     </div>
   );
@@ -62,6 +75,7 @@ export function FileInformationViewer() {
 function encodeWav(buf: AudioBuffer, start: number, end: number) {
   validateClip(start, end, buf.duration);
   const sr = buf.sampleRate, ch = buf.numberOfChannels, s = Math.floor(start * sr), e = Math.floor(end * sr), len = e - s;
+  validateFileBudget([{ size: 44 + len * ch * 2 }]);
   const out = new DataView(new ArrayBuffer(44 + len * ch * 2));
   const w = (o: number, str: string) => [...str].forEach((c, i) => out.setUint8(o + i, c.charCodeAt(0)));
   w(0, "RIFF"); out.setUint32(4, 36 + len * ch * 2, true); w(8, "WAVEfmt "); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, ch, true);
@@ -105,7 +119,7 @@ function useVideo() {
   const [error, setError] = useState(""); const [ready, setReady] = useState(false);
   const ref = useRef<HTMLVideoElement>(null);
   const abort = useRef(new AbortController());
-  useEffect(() => () => { abort.current.abort(); }, []);
+  useEffect(() => { abort.current = new AbortController(); return () => { abort.current.abort(); }; }, []);
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
   const pick = (fs: File[]) => { const x = fs[0]; if (!x) return; setError(""); setReady(false); setDur(0); setUrl(URL.createObjectURL(x)); setName(x.name); };
   const loaded = (el: HTMLVideoElement) => { if (!Number.isFinite(el.duration) || !el.videoWidth) { setError("This video has no readable duration or frames."); return; } setDur(el.duration); setReady(true); };

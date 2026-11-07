@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Copy, Download, Upload, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { validateFileBudget } from "@/lib/tool-processing";
 
 export function download(data: Blob | string, filename: string) {
   const url = typeof data === "string" ? data : URL.createObjectURL(data);
@@ -34,6 +35,7 @@ export function FileDrop({ accept, multiple, onFiles, label, disabled = false }:
   const locked = disabled || loading;
   const receive = async (files: File[]) => {
     if (locked || receiving.current || !files.length) return;
+    try { validateFileBudget(multiple ? files : files.slice(0, 1)); } catch (e) { setError((e as Error).message); return; }
     if (files.some((f) => !acceptsFile(f, accept))) { setError(`Choose a supported file (${accept}).`); return; }
     setError(""); receiving.current = true; setLoading(true);
     try { await onFiles(multiple ? files : files.slice(0, 1)); }
@@ -59,6 +61,7 @@ export function FileDrop({ accept, multiple, onFiles, label, disabled = false }:
       <div>
         <p className="font-medium">{loading ? "Opening files…" : label ?? (multiple ? "Drop files here or click to choose" : "Drop a file here or click to choose")}</p>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5 shrink-0" />Files stay on your device</p>
+        <p className="mt-1 text-xs text-muted-foreground">Up to 100 MiB per selection</p>
       </div>
       <input ref={ref} type="file" hidden accept={accept} multiple={multiple} disabled={locked}
         onChange={(e) => { void receive(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
@@ -122,7 +125,7 @@ export function loadImage(file: File | string): Promise<HTMLImageElement> {
   const url = typeof file === "string" ? file : URL.createObjectURL(file);
   return new Promise((res, rej) => {
     const img = new Image();
-    img.onload = () => { if (typeof file !== "string") URL.revokeObjectURL(url); res(img); };
+    img.onload = () => { if (typeof file !== "string") URL.revokeObjectURL(url); if (img.naturalWidth * img.naturalHeight > 40000000) { rej(new Error("This image exceeds 40 megapixels. Choose a smaller image.")); return; } res(img); };
     img.onerror = () => { if (typeof file !== "string") URL.revokeObjectURL(url); rej(new Error("This file could not be read as an image.")); };
     img.src = url;
   });
