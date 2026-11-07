@@ -8,7 +8,7 @@ export function download(data: Blob | string, filename: string) {
   a.href = url;
   a.download = filename;
   a.click();
-  if (typeof data !== "string") setTimeout(() => URL.revokeObjectURL(url), 2000);
+  if (typeof data !== "string") setTimeout(() => URL.revokeObjectURL(url), 30000);
 }
 
 export const fmtBytes = (n: number) =>
@@ -112,11 +112,12 @@ export function Stat({ label, value }: { label: string; value: ReactNode }) {
 }
 
 export function loadImage(file: File | string): Promise<HTMLImageElement> {
+  const url = typeof file === "string" ? file : URL.createObjectURL(file);
   return new Promise((res, rej) => {
     const img = new Image();
     img.onload = () => res(img);
-    img.onerror = () => rej(new Error("This file could not be read as an image."));
-    img.src = typeof file === "string" ? file : URL.createObjectURL(file);
+    img.onerror = () => { if (typeof file !== "string") URL.revokeObjectURL(url); rej(new Error("This file could not be read as an image.")); };
+    img.src = url;
   });
 }
 
