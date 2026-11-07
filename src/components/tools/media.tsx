@@ -112,7 +112,8 @@ export function VideoFrameExtractor() {
 
 export function VideoTrimmer() {
   const v = useVideo(); const [a, setA] = useState(0); const [b, setB] = useState(0); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
-  const supported = typeof window !== "undefined" && "MediaRecorder" in window && typeof HTMLVideoElement !== "undefined" && "captureStream" in HTMLVideoElement.prototype;
+  const [supported, setSupported] = useState<boolean | null>(null);
+  useEffect(() => { setSupported("MediaRecorder" in window && "captureStream" in HTMLVideoElement.prototype); }, []);
   const trim = async () => {
     const el = v.ref.current!; setBusy(true); setErr("");
     try {
@@ -127,7 +128,7 @@ export function VideoTrimmer() {
       download(new Blob(chunks, { type: "video/webm" }), `${baseName(v.name)}-trimmed.webm`);
     } catch { setErr("Recording failed in this browser. Try Chrome or Firefox."); } finally { setBusy(false); }
   };
-  if (!supported) return <ErrorNote>Your browser doesn't support in-browser video recording. Try Chrome, Edge or Firefox.</ErrorNote>;
+  if (supported === false) return <ErrorNote>Your browser doesn't support in-browser video recording. Try Chrome, Edge or Firefox.</ErrorNote>;
   if (!v.url) return <FileDrop accept="video/*" onFiles={v.pick} />;
   return (
     <div className="space-y-4">

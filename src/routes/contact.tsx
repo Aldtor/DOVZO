@@ -6,7 +6,7 @@ export const Route = createFileRoute("/contact")({
   component: () => (
     <>
       <PageHeader eyebrow="Contact" title="Contact DOVZO" />
-      <div className="mx-auto grid max-w-3xl gap-4 px-6">
+      <div className="reading-page mx-auto grid gap-0 px-5 sm:px-6">
         <section className="bento p-6"><h2 className="text-lg font-semibold">Say hello</h2><p className="mt-2 text-muted-foreground">Have a tool idea or found a bug? Email us at hello@dovzo.com — we read every message.</p></section>
         <section className="bento p-6"><h2 className="text-lg font-semibold">Business enquiries</h2><p className="mt-2 text-muted-foreground">For advertising and partnerships, contact partners@dovzo.com.</p></section>
       </div>

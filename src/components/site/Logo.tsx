@@ -20,7 +20,7 @@ export function Logo() {
   return (
     <Link to="/" className="flex items-center gap-2" aria-label="DOVZO home">
       <LogoMark />
-      <span className="text-lg font-bold tracking-[0.08em]">DOVZO</span>
+      <span className="text-lg font-bold">DOVZO</span>
     </Link>
   );
 }

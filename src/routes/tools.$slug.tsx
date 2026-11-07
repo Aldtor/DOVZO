@@ -26,9 +26,11 @@ export const Route = createFileRoute("/tools/$slug")({
 
 function ToolPage() {
   const { slug } = Route.useLoaderData();
-  const tool = getTool(slug)!;
-  const cat = getCategory(tool.category)!;
-  const Comp = toolComponents[slug]!;
+  const tool = getTool(slug);
+  if (!tool) return null;
+  const cat = getCategory(tool.category);
+  const Comp = toolComponents[slug];
+  if (!cat || !Comp) return null;
   const noun = tool.name.toLowerCase();
   const fileBased = ["image", "pdf", "file-media"].includes(tool.category) && !["base64-to-image"].includes(slug);
 
@@ -39,26 +41,26 @@ function ToolPage() {
   ];
 
   return (
-    <div className="mx-auto max-w-6xl px-6 pt-8">
-      <nav className="flex items-center gap-1 text-sm text-muted-foreground" aria-label="Breadcrumb">
+    <div className="mx-auto max-w-6xl px-5 pt-6 sm:px-6 md:pt-8">
+      <nav className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground" aria-label="Breadcrumb">
         <Link to="/" className="hover:text-foreground">Home</Link><ChevronRight className="h-3.5 w-3.5" />
         <Link to="/categories/$category" params={{ category: cat.id }} className="hover:text-foreground">{cat.name}</Link><ChevronRight className="h-3.5 w-3.5" />
         <span className="text-foreground">{tool.name}</span>
       </nav>
 
-      <header className="mt-6 flex flex-wrap items-start gap-4">
-        <span className={`grid h-14 w-14 place-items-center rounded-2xl ${toneClass[cat.tone]}`}><tool.icon className="h-7 w-7" /></span>
-        <div className="flex-1">
-          <h1 className="text-3xl font-bold md:text-4xl">{tool.name}</h1>
-          <p className="mt-1 text-muted-foreground">{tool.description}</p>
+      <header className="mt-6 flex flex-wrap items-start gap-3 md:gap-4">
+        <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-lg ${toneClass[cat.tone]}`}><tool.icon className="h-7 w-7" /></span>
+        <div className="min-w-0 flex-1">
+          <h1 className="text-2xl font-semibold md:text-3xl">{tool.name}</h1>
+          <p className="mt-2 text-sm leading-6 text-muted-foreground">{tool.description}</p>
         </div>
-        <span className="flex items-center gap-1.5 rounded-lg bg-success/10 px-3 py-1.5 text-xs font-medium text-success"><ShieldCheck className="h-4 w-4" /> Free · runs on your device</span>
+        <span className="flex w-full items-center gap-1.5 py-1 md:w-auto text-xs font-medium text-success"><ShieldCheck className="h-4 w-4" /> Free · runs on your device</span>
       </header>
 
-      <div className="bento mt-8 p-5 md:p-8"><Comp /></div>
+      <div className="tool-workspace bento mt-6 p-4 sm:p-6 md:mt-8" aria-label={`${tool.name} workspace`}><Comp /></div>
 
-      <div className="mt-10 grid gap-4 md:grid-cols-3">
-        <div className="bento p-6 md:col-span-2">
+      <div className="mt-10 grid gap-6 border-t border-border pt-6 md:grid-cols-3">
+        <div className="md:col-span-2">
           <h2 className="text-lg font-semibold">How to use</h2>
           <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
             <li>{fileBased ? "Drop your file into the box above, or click to choose it." : "Enter or paste your input above."}</li>
@@ -66,7 +68,7 @@ function ToolPage() {
             <li>{fileBased ? "Download the result — it's created right on your device." : "Copy the result with one click."}</li>
           </ol>
         </div>
-        <div className="bento p-6">
+        <div className="">
           <h2 className="text-lg font-semibold">Supported formats</h2>
           <p className="mt-3 text-sm text-muted-foreground">{tool.formats ?? (fileBased ? "Most common files" : "Plain text input")}</p>
         </div>
@@ -74,7 +76,7 @@ function ToolPage() {
 
       <section className="mt-10">
         <h2 className="mb-4 text-xl font-semibold">FAQ</h2>
-        <Accordion type="single" collapsible className="bento px-6">
+        <Accordion type="single" collapsible className="border-y border-border">
           {faq.map(([q, a]) => <AccordionItem key={q} value={q}><AccordionTrigger className="text-left">{q}</AccordionTrigger><AccordionContent className="text-muted-foreground">{a}</AccordionContent></AccordionItem>)}
         </Accordion>
       </section>

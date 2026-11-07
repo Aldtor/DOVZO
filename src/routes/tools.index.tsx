@@ -5,6 +5,7 @@ import { ToolCard } from "@/components/site/ToolCard";
 import { PageHeader, meta } from "@/components/site/PageHeader";
 import { categories, getCategory, searchTools, tools, toneClass, type CategoryId } from "@/lib/tools";
 import { inputCls } from "@/components/tools/kit";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/tools/")({
   head: () => meta("All 50 free tools — DOVZO", "Browse every DOVZO tool: image, PDF, text, developer, generators and file & media utilities."),
@@ -33,35 +34,35 @@ function AllTools() {
   }, [q, cat, sort, favs]);
 
   const chip = (id: typeof cat, label: string) => (
-    <button key={id} onClick={() => setCat(id)} className={`rounded-lg px-3 py-1.5 text-sm transition ${cat === id ? "bg-primary text-primary-foreground" : "bg-card text-muted-foreground ring-1 ring-border hover:text-foreground"}`}>{label}</button>
+    <Button key={id} variant={cat === id ? "secondary" : "ghost"} size="sm" aria-pressed={cat === id} onClick={() => setCat(id)} className={`shrink-0 ${cat === id ? "text-primary" : "text-muted-foreground"}`}>{label}</Button>
   );
 
   return (
     <>
       <PageHeader eyebrow={`${tools.length} tools`} title="All tools">Every tool is free and runs in your browser.</PageHeader>
       <div className="mx-auto max-w-6xl px-6">
-        <div className="glass sticky top-20 z-30 mb-6 flex flex-col gap-3 rounded-2xl p-3 shadow-soft">
+        <div className="mb-6 flex flex-col gap-3 border-y border-border py-4 md:sticky md:top-16 md:z-30 md:bg-background/95 md:backdrop-blur-xl">
           <div className="flex flex-wrap gap-2">
             <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Filter tools…" className={`${inputCls} min-w-48 flex-1`} aria-label="Filter tools" />
             <select value={sort} onChange={(e) => setSort(e.target.value)} className={inputCls} aria-label="Sort"><option value="popular">Popular first</option><option value="az">A–Z</option><option value="new">Recently added</option></select>
-            <div className="flex rounded-xl ring-1 ring-border">
-              <button onClick={() => setView("grid")} aria-label="Grid view" className={`px-3 ${view === "grid" ? "text-primary" : "text-muted-foreground"}`}><LayoutGrid className="h-4 w-4" /></button>
-              <button onClick={() => setView("list")} aria-label="List view" className={`px-3 ${view === "list" ? "text-primary" : "text-muted-foreground"}`}><List className="h-4 w-4" /></button>
+            <div className="flex gap-1 rounded-lg border border-border p-0.5">
+              <Button variant={view === "grid" ? "secondary" : "ghost"} size="icon" onClick={() => setView("grid")} aria-label="Grid view" aria-pressed={view === "grid"} title="Grid view" className="h-9 w-9"><LayoutGrid className="h-4 w-4" /></Button>
+              <Button variant={view === "list" ? "secondary" : "ghost"} size="icon" onClick={() => setView("list")} aria-label="List view" aria-pressed={view === "list"} title="List view" className="h-9 w-9"><List className="h-4 w-4" /></Button>
             </div>
           </div>
-          <div className="flex flex-wrap gap-2">{chip("all", "All")}{categories.map((c) => chip(c.id, c.short))}{chip("fav", `Favorites (${favs.length})`)}</div>
+          <div className="flex gap-1 overflow-x-auto pb-1 md:flex-wrap">{chip("all", "All")}{categories.map((c) => chip(c.id, c.short))}{chip("fav", `Favorites (${favs.length})`)}</div>
         </div>
 
         {list.length === 0 ? (
           <div className="bento flex flex-col items-center gap-3 p-16 text-center">
             <SearchX className="h-10 w-10 text-muted-foreground" /><h3 className="text-lg font-semibold">No tools found</h3>
             <p className="text-sm text-muted-foreground">Try a different word or clear your filters.</p>
-            <button onClick={() => { setQ(""); setCat("all"); }} className="rounded-xl bg-primary px-4 py-2 text-sm text-primary-foreground">Clear filters</button>
+            <Button onClick={() => { setQ(""); setCat("all"); }}>Clear filters</Button>
           </div>
         ) : view === "grid" ? (
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {list.map((t) => (
-              <div key={t.slug} className="relative">
+               <div key={t.slug} className="relative h-full">
                 <ToolCard tool={t} />
                 <FavBtn on={favs.includes(t.slug)} onClick={() => toggleFav(t.slug)} />
               </div>
@@ -69,12 +70,12 @@ function AllTools() {
           </div>
         ) : (
           <div className="bento divide-y divide-border">
-            {list.map((t) => { const c = getCategory(t.category)!; return (
+            {list.map((t) => { const c = getCategory(t.category); if (!c) return null; return (
               <div key={t.slug} className="relative flex items-center gap-4 p-4">
                 <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${toneClass[c.tone]}`}><t.icon className="h-5 w-5" /></span>
-                <Link to="/tools/$slug" params={{ slug: t.slug }} className="flex-1"><span className="font-medium">{t.name}</span><span className="block text-sm text-muted-foreground">{t.description}</span></Link>
+                <Link to="/tools/$slug" params={{ slug: t.slug }} className="min-w-0 flex-1"><span className="font-medium">{t.name}</span><span className="block text-sm leading-6 text-muted-foreground">{t.description}</span></Link>
                 <span className="hidden text-xs text-muted-foreground sm:block">{c.short}</span>
-                <button onClick={() => toggleFav(t.slug)} aria-label="Favorite"><Heart className={`h-4 w-4 ${favs.includes(t.slug) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} /></button>
+                <Button variant="ghost" size="icon" onClick={() => toggleFav(t.slug)} aria-label="Favorite" aria-pressed={favs.includes(t.slug)}><Heart className={`h-4 w-4 ${favs.includes(t.slug) ? "fill-destructive text-destructive" : "text-muted-foreground"}`} /></Button>
               </div>
             ); })}
           </div>
@@ -86,8 +87,8 @@ function AllTools() {
 
 function FavBtn({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
-    <button onClick={onClick} aria-label={on ? "Remove from favorites" : "Add to favorites"} className="absolute right-12 top-5 rounded-lg p-1.5 hover:bg-secondary">
+    <Button variant="ghost" size="icon" onClick={onClick} aria-label={on ? "Remove from favorites" : "Add to favorites"} aria-pressed={on} title={on ? "Remove from favorites" : "Add to favorites"} className="absolute right-9 top-3.5 h-9 w-9">
       <Heart className={`h-4 w-4 ${on ? "fill-destructive text-destructive" : "text-muted-foreground"}`} />
-    </button>
+    </Button>
   );
 }
