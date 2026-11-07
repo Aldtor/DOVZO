@@ -69,7 +69,7 @@ export function PasswordGenerator() {
     setPw(generatePassword(len, sets));
   };
   useEffect(gen, [len, opt]);
-  const pool = (opt.upper ? 24 : 0) + (opt.lower ? 25 : 0) + (opt.digits ? 8 : 0) + (opt.symbols ? 23 : 0);
+  const pool = [opt.upper && "ABCDEFGHJKLMNPQRSTUVWXYZ", opt.lower && "abcdefghijkmnopqrstuvwxyz", opt.digits && "23456789", opt.symbols && "!@#$%^&*()-_=+[]{};:,.?"].filter(Boolean).join("").length;
   const bits = pool ? Math.round(len * Math.log2(pool)) : 0;
   const strength = bits < 50 ? ["Weak", "bg-destructive"] : bits < 80 ? ["Good", "bg-warning"] : ["Strong", "bg-success"];
   return (

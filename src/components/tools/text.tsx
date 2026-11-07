@@ -81,7 +81,7 @@ export function TextSorter() {
     const c = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
     if (mode === "az") l.sort(c.compare);
     if (mode === "za") l.sort((a, b) => c.compare(b, a));
-    if (mode === "num") l.sort((a, b) => parseFloat(a) - parseFloat(b));
+    if (mode === "num") l.sort((a, b) => { const na = parseFloat(a), nb = parseFloat(b); const va = Number.isFinite(na), vb = Number.isFinite(nb); return va && vb ? na - nb : va ? -1 : vb ? 1 : 0; });
     if (mode === "len") l.sort((a, b) => a.length - b.length);
     if (mode === "shuffle") for (let i = l.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [l[i], l[j]] = [l[j], l[i]]; }
     return l.join("\n");
@@ -95,6 +95,7 @@ export function TextDiffChecker() {
   const rows = useMemo(() => {
     const A = a.split("\n"), B = b.split("\n");
     const n = A.length, m = B.length;
+    if (n * m > 2000000) return [{ t: "=" as const, s: "Texts are too large to compare here. Shorten the input and try again." }];
     const dp = Array.from({ length: n + 1 }, () => new Array(m + 1).fill(0));
     for (let i = n - 1; i >= 0; i--) for (let j = m - 1; j >= 0; j--) dp[i][j] = A[i] === B[j] ? dp[i + 1][j + 1] + 1 : Math.max(dp[i + 1][j], dp[i][j + 1]);
     const out: { t: "=" | "-" | "+"; s: string }[] = [];
@@ -134,9 +135,9 @@ export function LoremIpsumGenerator() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
-        <Field label="Amount"><input type="number" min={1} max={100} value={n} onChange={(e) => setN(Math.max(1, Math.min(100, +e.target.value)))} className={`${inputCls} w-24`} /></Field>
+        <Field label="Amount"><input type="number" min={1} max={100} value={n} onChange={(e) => { const v = e.target.value; if (v === "") { setN(0); return; } setN(Math.max(0, Math.min(100, Math.floor(+v)))); }} className={`${inputCls} w-24`} /></Field>
         <Field label="Unit"><Select value={unit} onChange={setUnit} options={[["p", "Paragraphs"], ["s", "Sentences"], ["w", "Words"]]} /></Field>
-        <Btn onClick={gen}>Generate</Btn>
+        <Btn disabled={n < 1} onClick={gen}>Generate</Btn>
         <CopyBtn text={out} />
       </div>
       <Area value={out} readOnly rows={12} placeholder="Click Generate" />
