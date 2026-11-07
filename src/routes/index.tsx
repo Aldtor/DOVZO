@@ -54,14 +54,14 @@ function Home() {
             </div>
           </div>
           {/* Bento preview */}
-          <div className="grid grid-cols-2 gap-3 self-center max-sm:[&>a]:min-h-28 max-sm:[&>a]:row-span-1 max-sm:[&>a]:gap-3 max-sm:[&>a]:p-4 max-sm:[&>a>div>p+ p]:hidden">
+          <div className="grid grid-cols-2 gap-3 self-center max-sm:[&>a]:min-h-28 max-sm:[&>a]:row-span-1 max-sm:[&>a]:gap-3 max-sm:[&>a]:p-4">
             {featured.map((t, i) => {
               const cat = categories.find((c) => c.id === t.category);
               if (!cat) return null;
               return (
                 <Link key={t.slug} to="/tools/$slug" params={{ slug: t.slug }} className={`bento bento-hover flex flex-col justify-between gap-6 p-5 ${i === 0 ? "row-span-2 min-h-60" : "min-h-28"}`}>
                   <span className={`grid h-11 w-11 place-items-center rounded-lg ${toneClass[cat.tone]}`}><t.icon className="h-5 w-5" /></span>
-                  <div><p className="font-semibold">{t.name}</p>{i === 0 && <p className="mt-1 text-sm text-muted-foreground">{t.description}</p>}</div>
+                  <div><p className="font-semibold">{t.name}</p>{i === 0 && <p className="mt-1 hidden text-sm text-muted-foreground sm:block">{t.description}</p>}</div>
                 </Link>
               );
             })}
