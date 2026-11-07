@@ -28,3 +28,6 @@ use the editor.
   own key and store it in Secrets.
 - **Secrets.** Lovable manages them. Do not put secret values in the repo.
 <!-- LOVABLE:END -->
+
+- Tool metadata lives only in `src/lib/tools.ts`; each tool's UI is registered by slug in `src/components/tools/registry.ts` and rendered by the single `/tools/$slug` route — keeps 50 tools consistent and adds a tool in two edits.
+- All tool processing runs client-side (canvas, pdf-lib, pdfjs, JSZip, Web Audio, MediaRecorder); no uploads, no AI — product rule from the brief.
