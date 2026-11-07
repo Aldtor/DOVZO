@@ -37,3 +37,4 @@ use the editor.
 - Tool workspaces are lazily registered by module; processing dependencies load only in the actions that need them, so unrelated tools never fetch PDF, archive, QR, barcode, or GIF engines.
 - Browser preferences use guarded, validated storage helpers; files remain transient browser state, so denied storage never prevents tool use.
 - Media jobs cancel on unmount and release workers, streams, canvases, and object URLs; previews use blobs where practical to avoid Base64 memory duplication.
+- User-supplied regex runs in a terminable worker with a timeout, so pathological expressions cannot freeze navigation.
