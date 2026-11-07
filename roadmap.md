@@ -11,3 +11,4 @@
 - [ ] Verify all routes at desktop/mobile sizes and real processing/download flows.
 - [ ] Provide production-readiness report with remaining Cloud, contact, and advertising setup requirements.
 - [x] Answer the latest remix question: finish readiness checks, review requirements, then publish.
+- [x] Answer the repeated remix question: review on a phone, replace contact placeholders, then publish.
