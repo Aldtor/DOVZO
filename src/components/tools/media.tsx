@@ -1,19 +1,21 @@
 import { useEffect, useRef, useState } from "react";
-import JSZip from "jszip";
+import type JSZip from "jszip";
+import { Button } from "@/components/ui/button";
+import { waitForClip } from "@/lib/media-lifecycle";
 import { File as FileIcon, Loader2, X } from "lucide-react";
-import { uniqueArchiveName, validateClip } from "@/lib/tool-processing";
-import { Btn, DownloadBtn, ErrorNote, FileDrop, Field, Stat, baseName, download, fmtBytes, inputCls } from "./kit";
+import { MAX_BROWSER_BYTES, uniqueArchiveName, validateClip, validateFileBudget } from "@/lib/tool-processing";
+import { Btn, DownloadBtn, ErrorNote, FileDrop, Field, Stat, baseName, canvasBlob, download, fmtBytes, inputCls } from "./kit";
 
 export function ZipCreator() {
   const [files, setFiles] = useState<File[]>([]); const [name, setName] = useState("archive"); const [busy, setBusy] = useState(false);
   const [err, setErr] = useState("");
-  const make = async () => { setBusy(true); setErr(""); try { const z = new JSZip(); const used = new Set<string>(); files.forEach((f) => z.file(uniqueArchiveName(f.name, used), f)); download(await z.generateAsync({ type: "blob", compression: "DEFLATE" }), `${name || "archive"}.zip`); } catch { setErr("The ZIP could not be created. Try fewer or smaller files."); } finally { setBusy(false); } };
+  const make = async () => { setBusy(true); setErr(""); try { validateFileBudget(files); const { default: JSZip } = await import("jszip"); const z = new JSZip(); const used = new Set<string>(); files.forEach((f) => z.file(uniqueArchiveName(f.name, used), f)); download(await z.generateAsync({ type: "blob", compression: "DEFLATE" }), `${name || "archive"}.zip`); } catch (e) { setErr(e instanceof Error ? e.message : "The ZIP could not be created. Try fewer or smaller files."); } finally { setBusy(false); } };
   const total = files.reduce((s, f) => s + f.size, 0);
   return (
     <div className="space-y-4">
       <FileDrop multiple disabled={busy} onFiles={(fs) => setFiles((p) => [...p, ...fs])} label="Add files to the ZIP" />
       {err && <ErrorNote>{err}</ErrorNote>}
-      <div className="space-y-2">{files.map((f, i) => <div key={i} className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2 text-sm"><FileIcon className="h-4 w-4" /><span className="flex-1 truncate">{f.name}</span><span className="text-xs text-muted-foreground">{fmtBytes(f.size)}</span><button onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label="Remove"><X className="h-4 w-4" /></button></div>)}</div>
+      <div className="space-y-2">{files.map((f, i) => <div key={i} className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2 text-sm"><FileIcon className="h-4 w-4" /><span className="flex-1 truncate">{f.name}</span><span className="text-xs text-muted-foreground">{fmtBytes(f.size)}</span><Button variant="ghost" size="icon" disabled={busy} onClick={() => setFiles(files.filter((_, j) => j !== i))} aria-label="Remove"><X className="h-4 w-4" /></Button></div>)}</div>
       {files.length > 0 && <div className="flex flex-wrap items-end gap-3"><Field label="ZIP name"><input value={name} onChange={(e) => setName(e.target.value)} className={inputCls} /></Field><Btn disabled={busy} onClick={make}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}Create ZIP ({files.length} files, {fmtBytes(total)})</Btn></div>}
     </div>
   );
@@ -21,16 +23,29 @@ export function ZipCreator() {
 
 export function ZipExtractor() {
   const [entries, setEntries] = useState<JSZip.JSZipObject[]>([]); const [err, setErr] = useState(""); const [zipName, setZipName] = useState("");
-  const open = async (fs: File[]) => { const f = fs[0]; if (!f) return; setEntries([]); setZipName(""); try { const z = await JSZip.loadAsync(f); setEntries(Object.values(z.files).filter((e) => !e.dir)); setZipName(f.name); setErr(""); } catch { setErr("That file isn't a readable ZIP archive."); } };
+  const [extracting, setExtracting] = useState(false);
+  const extract = async (entry: JSZip.JSZipObject) => {
+    setExtracting(true); setErr("");
+    try {
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        const chunks: Uint8Array[] = []; let bytes = 0;
+        const stream = entry.internalStream("uint8array");
+        stream.on("data", (chunk) => { bytes += chunk.length; if (bytes > MAX_BROWSER_BYTES) { stream.pause(); reject(new Error("This extracted file exceeds 100 MiB.")); return; } chunks.push(chunk); });
+        stream.on("error", reject); stream.on("end", () => resolve(new Blob(chunks as BlobPart[]))); stream.resume();
+      });
+      download(blob, entry.name.split("/").pop() ?? "file");
+    } catch (e) { setErr(e instanceof Error ? e.message : "The ZIP entry could not be extracted."); } finally { setExtracting(false); }
+  };
+  const open = async (fs: File[]) => { const f = fs[0]; if (!f) return; setEntries([]); setZipName(""); try { const { default: JSZip } = await import("jszip"); const z = await JSZip.loadAsync(f); setEntries(Object.values(z.files).filter((e) => !e.dir)); setZipName(f.name); setErr(""); } catch { setErr("That file isn't a readable ZIP archive."); } };
   return (
     <div className="space-y-4">
-      <FileDrop accept=".zip,application/zip" onFiles={open} label="Drop a ZIP file" />
+      <FileDrop accept=".zip,application/zip" disabled={extracting} onFiles={open} label="Drop a ZIP file" />
       {err && <ErrorNote>{err}</ErrorNote>}
       {entries.length > 0 && <p className="text-sm text-muted-foreground">{zipName} · {entries.length} files</p>}
       {zipName && !entries.length && <p role="status" className="text-sm text-muted-foreground">This ZIP contains no files.</p>}
       <div className="space-y-2">{entries.map((e) => (
         <div key={e.name} className="flex items-center gap-3 rounded-xl bg-secondary px-3 py-2 text-sm"><FileIcon className="h-4 w-4" /><span className="flex-1 truncate font-mono text-xs">{e.name}</span>
-          <Btn variant="ghost" onClick={async () => { try { download(await e.async("blob"), e.name.split("/").pop() ?? "file"); } catch { setErr(`Could not extract ${e.name}. The entry may be damaged.`); } }}>Download</Btn></div>
+          <Btn variant="ghost" disabled={extracting} onClick={() => extract(e)} aria-label={`Download ${e.name}`}>Download</Btn></div>
       ))}</div>
     </div>
   );
@@ -60,6 +75,7 @@ export function FileInformationViewer() {
 function encodeWav(buf: AudioBuffer, start: number, end: number) {
   validateClip(start, end, buf.duration);
   const sr = buf.sampleRate, ch = buf.numberOfChannels, s = Math.floor(start * sr), e = Math.floor(end * sr), len = e - s;
+  validateFileBudget([{ size: 44 + len * ch * 2 }]);
   const out = new DataView(new ArrayBuffer(44 + len * ch * 2));
   const w = (o: number, str: string) => [...str].forEach((c, i) => out.setUint8(o + i, c.charCodeAt(0)));
   w(0, "RIFF"); out.setUint32(4, 36 + len * ch * 2, true); w(8, "WAVEfmt "); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, ch, true);
@@ -70,11 +86,11 @@ function encodeWav(buf: AudioBuffer, start: number, end: number) {
   return new Blob([out], { type: "audio/wav" });
 }
 
-function RangeControls({ dur, a, b, setA, setB }: { dur: number; a: number; b: number; setA: (n: number) => void; setB: (n: number) => void }) {
+function RangeControls({ dur, a, b, setA, setB, disabled = false }: { disabled?: boolean; dur: number; a: number; b: number; setA: (n: number) => void; setB: (n: number) => void }) {
   return (
     <div className="grid gap-3 sm:grid-cols-2">
-      <Field label={`Start ${a.toFixed(1)}s`}><input type="range" min={0} max={dur} step={0.01} value={a} onChange={(e) => setA(Math.max(0, Math.min(+e.target.value, b - Math.min(0.01, dur / 2))))} /></Field>
-      <Field label={`End ${b.toFixed(1)}s`}><input type="range" min={0} max={dur} step={0.01} value={b} onChange={(e) => setB(Math.min(dur, Math.max(+e.target.value, a + Math.min(0.01, dur / 2))))} /></Field>
+      <Field label={`Start ${a.toFixed(1)}s`}><input type="range" disabled={disabled} min={0} max={dur} step={0.01} value={a} onChange={(e) => setA(Math.max(0, Math.min(+e.target.value, b - Math.min(0.01, dur / 2))))} /></Field>
+      <Field label={`End ${b.toFixed(1)}s`}><input type="range" disabled={disabled} min={0} max={dur} step={0.01} value={b} onChange={(e) => setB(Math.min(dur, Math.max(+e.target.value, a + Math.min(0.01, dur / 2))))} /></Field>
     </div>
   );
 }
@@ -102,10 +118,12 @@ function useVideo() {
   const [url, setUrl] = useState(""); const [name, setName] = useState(""); const [dur, setDur] = useState(0);
   const [error, setError] = useState(""); const [ready, setReady] = useState(false);
   const ref = useRef<HTMLVideoElement>(null);
+  const abort = useRef(new AbortController());
+  useEffect(() => { abort.current = new AbortController(); return () => { abort.current.abort(); }; }, []);
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
   const pick = (fs: File[]) => { const x = fs[0]; if (!x) return; setError(""); setReady(false); setDur(0); setUrl(URL.createObjectURL(x)); setName(x.name); };
   const loaded = (el: HTMLVideoElement) => { if (!Number.isFinite(el.duration) || !el.videoWidth) { setError("This video has no readable duration or frames."); return; } setDur(el.duration); setReady(true); };
-  return { url, name, dur, setDur, ref, pick, ready, error, loaded, fail: () => { setReady(false); setError("Your browser cannot decode this video. Try a supported MP4 or WebM file."); }, reset: () => { setUrl(""); setDur(0); setReady(false); setError(""); } };
+  return { url, name, dur, setDur, ref, pick, ready, error, loaded, abort, fail: () => { setReady(false); setError("Your browser cannot decode this video. Try a supported MP4 or WebM file."); }, reset: () => { setUrl(""); setDur(0); setReady(false); setError(""); } };
 }
 const seek = (v: HTMLVideoElement, t: number) => new Promise<void>((resolve, reject) => {
   if (v.readyState >= 2 && Math.abs(v.currentTime - t) < 0.001) { resolve(); return; }
@@ -116,20 +134,30 @@ const seek = (v: HTMLVideoElement, t: number) => new Promise<void>((resolve, rej
 
 export function VideoFrameExtractor() {
   const v = useVideo(); const [frames, setFrames] = useState<{ t: number; url: string }[]>([]);
-  const grab = () => { const el = v.ref.current; if (!el || !v.ready || el.readyState < 2) return; const c = document.createElement("canvas"); c.width = el.videoWidth; c.height = el.videoHeight; const ctx = c.getContext("2d"); if (!ctx) return; ctx.drawImage(el, 0, 0); setFrames((f) => [...f, { t: el.currentTime, url: c.toDataURL("image/png") }]); };
+  const urls = useRef<string[]>([]); const [error, setError] = useState("");
+  useEffect(() => () => urls.current.forEach((url) => URL.revokeObjectURL(url)), []);
+  const grab = async () => {
+    const el = v.ref.current; if (!el || !v.ready || el.readyState < 2) return;
+    if (el.videoWidth * el.videoHeight > 40000000 || frames.length >= 100) { setError("Choose a video under 40 megapixels and capture up to 100 frames per session."); return; }
+    const c = document.createElement("canvas"); c.width = el.videoWidth; c.height = el.videoHeight;
+    try { const ctx = c.getContext("2d"); if (!ctx) throw new Error("Canvas processing unavailable."); ctx.drawImage(el, 0, 0); const t = el.currentTime; const blob = await canvasBlob(c); if (v.abort.current.signal.aborted) return; const url = URL.createObjectURL(blob); urls.current.push(url); setFrames((f) => [...f, { t, url }]); setError(""); }
+    catch { setError("The frame could not be exported."); } finally { c.width = 0; c.height = 0; }
+  };
   if (!v.url) return <FileDrop accept="video/*" onFiles={v.pick} />;
   return (
     <div className="space-y-4">
       <video ref={v.ref} src={v.url} controls playsInline onLoadedData={(e) => v.loaded(e.currentTarget)} onError={v.fail} className="max-h-96 w-full rounded-2xl bg-foreground" />
-      {v.error && <ErrorNote>{v.error}</ErrorNote>}
-      <div className="flex gap-3"><Btn disabled={!v.ready} onClick={grab}>Capture current frame</Btn><Btn variant="ghost" onClick={() => { setFrames([]); v.reset(); }}>Choose another</Btn></div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{frames.map((f, i) => <button key={i} onClick={() => download(f.url, `${baseName(v.name)}-${f.t.toFixed(2)}s.png`)} className="bento bento-hover p-2 text-xs"><img src={f.url} alt={`Frame at ${f.t.toFixed(2)}s`} className="w-full rounded-lg" />{f.t.toFixed(2)}s · Download</button>)}</div>
+      {(v.error || error) && <ErrorNote>{v.error || error}</ErrorNote>}
+      <div className="flex gap-3"><Btn disabled={!v.ready} onClick={grab}>Capture current frame</Btn><Btn variant="ghost" onClick={() => { urls.current.forEach((url) => URL.revokeObjectURL(url)); urls.current = []; setFrames([]); setError(""); v.reset(); }}>Choose another</Btn></div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">{frames.map((f, i) => <Button variant="ghost" key={i} onClick={() => download(f.url, `${baseName(v.name)}-${f.t.toFixed(2)}s.png`)} className="bento bento-hover h-auto w-full flex-col p-2 text-xs"><img src={f.url} alt={`Frame at ${f.t.toFixed(2)}s`} className="w-full rounded-lg" />{f.t.toFixed(2)}s · Download</Button>)}</div>
     </div>
   );
 }
 
 export function VideoTrimmer() {
   const v = useVideo(); const [a, setA] = useState(0); const [b, setB] = useState(0); const [busy, setBusy] = useState(false); const [err, setErr] = useState("");
+  const active = useRef<{ recorder: MediaRecorder; stream: MediaStream } | null>(null);
+  useEffect(() => () => { const job = active.current; if (job?.recorder.state !== "inactive") job?.recorder.stop(); job?.stream.getTracks().forEach((track) => track.stop()); }, []);
   const [supported, setSupported] = useState<boolean | null>(null);
   useEffect(() => { setSupported("MediaRecorder" in window && "captureStream" in HTMLVideoElement.prototype); }, []);
   const trim = async () => {
@@ -139,18 +167,20 @@ export function VideoTrimmer() {
       validateClip(a, b, v.dur);
       el.pause();
       await seek(el, a);
+      if (v.abort.current.signal.aborted) return;
       stream = (el as HTMLVideoElement & { captureStream(): MediaStream }).captureStream();
       const mimeType = ["video/webm;codecs=vp9", "video/webm;codecs=vp8", "video/webm"].find((type) => MediaRecorder.isTypeSupported(type));
       if (!mimeType) throw new Error("WebM recording is unsupported.");
       const rec = new MediaRecorder(stream, { mimeType }); recorder = rec;
       const chunks: Blob[] = []; rec.ondataavailable = (e) => chunks.push(e.data);
       const done = new Promise<void>((r) => (rec.onstop = () => r()));
+      active.current = { recorder: rec, stream };
       rec.start(); await el.play();
-      await new Promise<void>((r) => { const tick = () => (el.currentTime >= b || el.ended ? r() : requestAnimationFrame(tick)); tick(); });
+      await waitForClip(el, b, v.abort.current.signal);
       el.pause(); rec.stop(); await done;
       const blob = new Blob(chunks, { type: "video/webm" }); if (!blob.size) throw new Error("Recording produced no video.");
-      download(blob, `${baseName(v.name)}-trimmed.webm`);
-    } catch { setErr("Recording failed in this browser. Try Chrome or Firefox."); } finally { el.pause(); if (recorder && recorder.state !== "inactive") recorder.stop(); stream?.getTracks().forEach((track) => track.stop()); setBusy(false); }
+      if (v.abort.current.signal.aborted) return; download(blob, `${baseName(v.name)}-trimmed.webm`);
+    } catch { if (!v.abort.current.signal.aborted) setErr("Recording failed in this browser. Try Chrome or Firefox."); } finally { el.pause(); if (recorder && recorder.state !== "inactive") recorder.stop(); stream?.getTracks().forEach((track) => track.stop()); active.current = null; if (!v.abort.current.signal.aborted) setBusy(false); }
   };
   if (supported === false) return <ErrorNote>Your browser doesn't support in-browser video recording. Try Chrome, Edge or Firefox.</ErrorNote>;
   if (!v.url) return <FileDrop accept="video/*" onFiles={v.pick} />;
@@ -158,7 +188,7 @@ export function VideoTrimmer() {
     <div className="space-y-4">
       <video ref={v.ref} src={v.url} controls={!busy} playsInline onLoadedData={(e) => { v.loaded(e.currentTarget); setA(0); setB(e.currentTarget.duration); }} onError={v.fail} className="max-h-96 w-full rounded-2xl bg-foreground" />
       {v.error && <ErrorNote>{v.error}</ErrorNote>}
-      {v.dur > 0 && <RangeControls dur={v.dur} a={a} b={b} setA={setA} setB={setB} />}
+      {v.dur > 0 && <RangeControls disabled={!!busy} dur={v.dur} a={a} b={b} setA={setA} setB={setB} />}
       <p className="text-xs text-muted-foreground">The clip is recorded in real time (a {(b - a).toFixed(1)}s clip takes {(b - a).toFixed(1)}s) and saved as WebM.</p>
       {err && <ErrorNote>{err}</ErrorNote>}
       <div className="flex gap-3"><Btn disabled={busy || !v.ready} onClick={trim}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}{busy ? "Recording…" : "Trim & download"}</Btn><Btn variant="ghost" disabled={busy} onClick={() => { setA(0); setB(0); setErr(""); v.reset(); }}>Choose another</Btn></div>
@@ -174,29 +204,32 @@ export function VideoToGif() {
   const make = async () => {
     const el = v.ref.current; if (!el || !v.ready) return;
     setBusy("Preparing…"); setErr(""); setOut("");
+    let canvas: HTMLCanvasElement | undefined;
     try {
     validateClip(a, b, v.dur, 15); el.pause();
     const { GIFEncoder, quantize, applyPalette } = await import("gifenc");
     const h = Math.round((el.videoHeight / el.videoWidth) * width);
-    const c = document.createElement("canvas"); c.width = width; c.height = h; const ctx = c.getContext("2d", { willReadFrequently: true });
+    if (width * h > 4000000) throw new Error("The GIF frame is too large. Choose a smaller width.");
+    const c = document.createElement("canvas"); canvas = c; c.width = width; c.height = h; const ctx = c.getContext("2d", { willReadFrequently: true });
     if (!ctx) throw new Error("Canvas processing is unavailable.");
     const gif = GIFEncoder(); const n = Math.max(1, Math.round((b - a) * fps));
     for (let i = 0; i < n; i++) {
+      if (v.abort.current.signal.aborted) return;
       setBusy(`Frame ${i + 1}/${n}`); await seek(el, a + i / fps); ctx.drawImage(el, 0, 0, width, h);
       const data = ctx.getImageData(0, 0, width, h).data; const pal = quantize(data, 256); gif.writeFrame(applyPalette(data, pal), width, h, { palette: pal, delay: 1000 / fps });
     }
-    gif.finish(); setOut(URL.createObjectURL(new Blob([gif.bytes() as BlobPart], { type: "image/gif" })));
-    } catch (e) { setErr(e instanceof Error ? e.message : "GIF creation failed."); } finally { setBusy(""); }
+    gif.finish(); if (v.abort.current.signal.aborted) return; c.width = 0; c.height = 0; setOut(URL.createObjectURL(new Blob([gif.bytes() as BlobPart], { type: "image/gif" })));
+    } catch (e) { if (!v.abort.current.signal.aborted) setErr(e instanceof Error ? e.message : "GIF creation failed."); } finally { if (canvas) { canvas.width = 0; canvas.height = 0; } if (!v.abort.current.signal.aborted) setBusy(""); }
   };
   if (!v.url) return <FileDrop accept="video/*" onFiles={v.pick} />;
   return (
     <div className="space-y-4">
       <video ref={v.ref} src={v.url} controls={!busy} muted playsInline onLoadedData={(e) => { v.loaded(e.currentTarget); setA(0); setB(Math.min(3, e.currentTarget.duration)); }} onError={v.fail} className="max-h-80 w-full rounded-2xl bg-foreground" />
       {(err || v.error) && <ErrorNote>{err || v.error}</ErrorNote>}
-      {v.dur > 0 && <RangeControls dur={v.dur} a={a} b={b} setA={(x) => { setA(x); setB((end) => Math.min(end, x + 15)); setOut(""); }} setB={(x) => { setB(Math.min(x, a + 15)); setOut(""); }} />}
+      {v.dur > 0 && <RangeControls disabled={!!busy} dur={v.dur} a={a} b={b} setA={(x) => { setA(x); setB((end) => Math.min(end, x + 15)); setOut(""); }} setB={(x) => { setB(Math.min(x, a + 15)); setOut(""); }} />}
       <div className="flex flex-wrap gap-4">
-        <Field label={`FPS ${fps}`}><input type="range" min={5} max={20} value={fps} onChange={(e) => setFps(+e.target.value)} /></Field>
-        <Field label={`Width ${width}px`}><input type="range" min={160} max={800} step={20} value={width} onChange={(e) => setWidth(+e.target.value)} /></Field>
+        <Field label={`FPS ${fps}`}><input type="range" min={5} max={20} value={fps} disabled={!!busy} onChange={(e) => { setFps(+e.target.value); setOut(""); }} /></Field>
+        <Field label={`Width ${width}px`}><input type="range" min={160} max={800} step={20} value={width} disabled={!!busy} onChange={(e) => { setWidth(+e.target.value); setOut(""); }} /></Field>
       </div>
       <p className="text-xs text-muted-foreground">Clips are limited to 15 seconds to keep GIFs a sensible size.</p>
       <div className="flex gap-3"><Btn disabled={!!busy || !v.ready} onClick={make}>{busy && <Loader2 className="h-4 w-4 animate-spin" />}{busy || "Create GIF"}</Btn><Btn variant="ghost" disabled={!!busy} onClick={() => { setOut(""); setErr(""); setA(0); setB(3); v.reset(); }}>Choose another</Btn></div>

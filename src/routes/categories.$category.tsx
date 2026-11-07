@@ -20,7 +20,8 @@ export const Route = createFileRoute("/categories/$category")({
 
 function CategoryPage() {
   const { id } = Route.useLoaderData();
-  const c = getCategory(id)!;
+  const c = getCategory(id);
+  if (!c) return null;
   const list = toolsIn(c.id);
   return (
     <>

@@ -3,6 +3,11 @@ export function integerInRange(value: number, min: number, max: number, label: s
   return value;
 }
 
+export const MAX_BROWSER_BYTES = 100 * 1024 * 1024;
+export function validateFileBudget(files: readonly { size: number }[]) {
+  if (files.reduce((sum, file) => sum + file.size, 0) > MAX_BROWSER_BYTES) throw new Error("Choose files totaling 100 MiB or less to keep browser memory use manageable.");
+}
+
 export function validateClip(start: number, end: number, duration: number, maximum = Infinity) {
   if (![start, end, duration].every(Number.isFinite) || start < 0 || end > duration || end <= start || end - start > maximum) throw new Error(`Choose a valid clip within the file${Number.isFinite(maximum) ? `, no longer than ${maximum} seconds` : ""}.`);
 }

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { integerInRange } from "@/lib/tool-processing";
 import { Area, Btn, CopyBtn, DownloadBtn, ErrorNote, FileDrop, Field, Select, Stat, baseName, canvasBlob, download, extFor, fmtBytes, inputCls, loadImage } from "./kit";
@@ -7,30 +7,32 @@ function useImage() {
   const [file, setFile] = useState<File | null>(null);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [err, setErr] = useState("");
+  const [preview, setPreview] = useState("");
+  useEffect(() => { if (!file) { setPreview(""); return; } const url = URL.createObjectURL(file); setPreview(url); return () => URL.revokeObjectURL(url); }, [file]);
   const pick = async (fs: File[]) => {
     const f = fs[0]; if (!f) return;
-    if (!f.type.startsWith("image/")) return setErr("Please choose an image file.");
     try { setImg(await loadImage(f)); setFile(f); setErr(""); } catch (e) { setErr((e as Error).message); }
   };
-  return { file, img, err, pick, reset: () => { setFile(null); setImg(null); } };
+  return { file, img, preview, err, pick, reset: () => { setFile(null); setImg(null); } };
 }
 
 type Draw = (img: HTMLImageElement) => HTMLCanvasElement;
 function render(img: HTMLImageElement, w: number, h: number, fn?: (ctx: CanvasRenderingContext2D) => void) {
-  const c = document.createElement("canvas"); c.width = w; c.height = h;
   integerInRange(w, 1, 10000, "Width"); integerInRange(h, 1, 10000, "Height");
   if (w * h > 40000000) throw new Error("The result exceeds 40 megapixels. Choose smaller dimensions.");
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
   const ctx = c.getContext("2d");
   if (!ctx) throw new Error("Canvas processing is unavailable in this browser.");
   if (fn) fn(ctx); else ctx.drawImage(img, 0, 0, w, h);
   return c;
 }
 
-function ImageTool({ controls, draw, type, quality, suffix }: { controls?: (img: HTMLImageElement) => React.ReactNode; draw: Draw; type?: string; quality?: number; suffix: string }) {
-  const { file, img, err, pick, reset } = useImage();
+function ImageTool({ controls, draw, type, quality, suffix, onImage }: { controls?: (img: HTMLImageElement) => React.ReactNode; draw: Draw; type?: string; quality?: number; suffix: string; onImage?: (img: HTMLImageElement) => void }) {
+  const { file, img, preview, err, pick, reset } = useImage();
   const [out, setOut] = useState<{ blob: Blob; url: string } | null>(null);
   const [processingError, setProcessingError] = useState("");
   const outputUrl = useRef("");
+  useEffect(() => { if (img) onImage?.(img); }, [img, onImage]);
   useEffect(() => () => { if (outputUrl.current) URL.revokeObjectURL(outputUrl.current); }, []);
   useEffect(() => {
     setOut(null); setProcessingError("");
@@ -38,7 +40,7 @@ function ImageTool({ controls, draw, type, quality, suffix }: { controls?: (img:
     if (!img || !file) return;
     let cancel = false;
     const t = type ?? (file.type === "image/jpeg" || file.type === "image/webp" ? file.type : "image/png");
-    void (async () => {
+    const debounce = setTimeout(() => { void (async () => {
       try {
         const c = draw(img);
         if (t === "image/jpeg") {
@@ -48,9 +50,9 @@ function ImageTool({ controls, draw, type, quality, suffix }: { controls?: (img:
           done(await canvasBlob(canvas, t, quality));
         } else done(await canvasBlob(c, t, quality));
       } catch (e) { if (!cancel) setProcessingError(e instanceof Error ? e.message : "Image export failed."); }
-    })();
+    })(); }, 120);
     function done(b: Blob) { if (!cancel) { outputUrl.current = URL.createObjectURL(b); setOut({ blob: b, url: outputUrl.current }); } }
-    return () => { cancel = true; };
+    return () => { cancel = true; clearTimeout(debounce); };
   }, [img, file, draw, type, quality]);
   if (!img || !file) return <div className="space-y-3"><FileDrop accept="image/*" onFiles={pick} />{err && <ErrorNote>{err}</ErrorNote>}</div>;
   return (
@@ -58,7 +60,7 @@ function ImageTool({ controls, draw, type, quality, suffix }: { controls?: (img:
       {processingError && <ErrorNote>{processingError}</ErrorNote>}
       {controls && <div className="flex flex-wrap items-end gap-4">{controls(img)}</div>}
       <div className="grid gap-4 md:grid-cols-2">
-        <figure className="space-y-2"><div className="grid h-72 place-items-center overflow-hidden rounded-2xl bg-secondary grid-dots"><img src={img.src} alt="Original" className="max-h-full max-w-full object-contain" /></div><figcaption className="text-xs text-muted-foreground">Original · {img.naturalWidth}×{img.naturalHeight} · {fmtBytes(file.size)}</figcaption></figure>
+        <figure className="space-y-2"><div className="grid h-72 place-items-center overflow-hidden rounded-2xl bg-secondary grid-dots">{preview && <img src={preview} alt="Original" className="max-h-full max-w-full object-contain" />}</div><figcaption className="text-xs text-muted-foreground">Original · {img.naturalWidth}×{img.naturalHeight} · {fmtBytes(file.size)}</figcaption></figure>
         <figure className="space-y-2"><div className="grid h-72 place-items-center overflow-hidden rounded-2xl bg-secondary grid-dots">{out && <img src={out.url} alt="Result" className="max-h-full max-w-full object-contain" />}</div>
           <figcaption className="text-xs text-muted-foreground">Result · {out ? fmtBytes(out.blob.size) : "…"}{out && file.size ? ` (${Math.round((1 - out.blob.size / file.size) * 100)}% smaller)`.replace("(-", "(+").replace("smaller", out.blob.size > file.size ? "larger" : "smaller") : ""}</figcaption></figure>
       </div>
@@ -82,8 +84,8 @@ export function ImageResizer() {
   const [w, setW] = useState(0); const [h, setH] = useState(0); const [lock, setLock] = useState(true);
   const [draw, setDraw] = useState<Draw>(() => (img: HTMLImageElement) => render(img, img.naturalWidth, img.naturalHeight));
   useEffect(() => { setDraw(() => (img: HTMLImageElement) => render(img, w, h)); }, [w, h]);
-  return <ImageTool suffix={`${w}x${h}`} draw={draw} controls={(img) => {
-    if (!w) setTimeout(() => { setW(img.naturalWidth); setH(img.naturalHeight); });
+  const initialize = useCallback((img: HTMLImageElement) => { setW(img.naturalWidth); setH(img.naturalHeight); }, []);
+  return <ImageTool suffix={`${w}x${h}`} draw={draw} onImage={initialize} controls={(img) => {
     const r = img.naturalHeight / img.naturalWidth;
     return <>
       <Field label="Width (px)"><input type="number" min={1} max={10000} value={w} onChange={(e) => { const v = +e.target.value; setW(v); if (lock) setH(Math.round(v * r)); }} className={`${inputCls} w-28`} /></Field>
@@ -127,12 +129,13 @@ export function ImageCropper() {
   const [box, setBox] = useState({ x: 0, y: 0, w: 0, h: 0 });
   const [draw, setDraw] = useState<Draw>(() => (img: HTMLImageElement) => render(img, img.naturalWidth, img.naturalHeight));
   useEffect(() => { setDraw(() => (img: HTMLImageElement) => {
+    integerInRange(box.x, 0, img.naturalWidth - 1, "X"); integerInRange(box.y, 0, img.naturalHeight - 1, "Y");
     if (box.x + box.w > img.naturalWidth || box.y + box.h > img.naturalHeight) throw new Error("The crop must fit inside the image.");
     return render(img, box.w, box.h, (ctx) => ctx.drawImage(img, box.x, box.y, box.w, box.h, 0, 0, box.w, box.h));
   }); }, [box]);
-  return <ImageTool suffix="cropped" draw={draw} controls={(img) => {
+  const initialize = useCallback((img: HTMLImageElement) => setBox({ x: 0, y: 0, w: img.naturalWidth, h: img.naturalHeight }), []);
+  return <ImageTool suffix="cropped" draw={draw} onImage={initialize} controls={(img) => {
     const W = img.naturalWidth, H = img.naturalHeight;
-    if (!box.w) setTimeout(() => setBox({ x: 0, y: 0, w: W, h: H }));
     const ratio = (r: number) => { const w = Math.min(W, Math.round(H * r)), h = Math.round(w / r); setBox({ x: Math.round((W - w) / 2), y: Math.round((H - h) / 2), w, h }); };
     const num = (k: keyof typeof box, max: number) => <Field label={k.toUpperCase()}><input type="number" min={0} max={max} value={box[k]} onChange={(e) => setBox({ ...box, [k]: Math.max(0, Math.min(max, +e.target.value)) })} className={`${inputCls} w-24`} /></Field>;
     return <>{num("x", W - 1)}{num("y", H - 1)}{num("w", W - box.x)}{num("h", H - box.y)}
@@ -142,7 +145,7 @@ export function ImageCropper() {
 
 export function ImageToBase64() {
   const [url, setUrl] = useState(""); const [name, setName] = useState("");
-  const pick = (fs: File[]) => { const f = fs[0]; if (!f) return; setName(f.name); const r = new FileReader(); r.onload = () => setUrl(r.result as string); r.readAsDataURL(f); };
+  const pick = async (fs: File[]) => { const f = fs[0]; if (!f) return; await loadImage(f); const result = await new Promise<string>((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(String(r.result)); r.onerror = () => reject(new Error("The image could not be read.")); r.onabort = () => reject(new Error("Reading cancelled.")); r.readAsDataURL(f); }); setName(f.name); setUrl(result); };
   if (!url) return <FileDrop accept="image/*" onFiles={pick} />;
   return (
     <div className="space-y-4">
@@ -171,6 +174,7 @@ export function ImageColorPicker() {
   const ref = useRef<HTMLCanvasElement>(null);
   const [col, setCol] = useState<string | null>(null);
   const [hist, setHist] = useState<string[]>([]);
+  const [point, setPoint] = useState({ x: 0, y: 0 });
   useEffect(() => { if (img && ref.current) { const c = ref.current; c.width = img.naturalWidth; c.height = img.naturalHeight; c.getContext("2d")?.drawImage(img, 0, 0); } }, [img]);
   if (!img) return <div className="space-y-3"><FileDrop accept="image/*" onFiles={pick} />{err && <ErrorNote>{err}</ErrorNote>}</div>;
   const at = (e: React.MouseEvent<HTMLCanvasElement>) => {
@@ -184,7 +188,13 @@ export function ImageColorPicker() {
   const rgb = (h: string) => `rgb(${parseInt(h.slice(1, 3), 16)}, ${parseInt(h.slice(3, 5), 16)}, ${parseInt(h.slice(5, 7), 16)})`;
   return (
     <div className="grid gap-5 md:grid-cols-[1fr_240px]">
-      <canvas ref={ref} onMouseMove={(e) => setCol(at(e))} onClick={(e) => { const c = at(e); setCol(c); setHist((h) => [c, ...h.filter((x) => x !== c)].slice(0, 10)); }} className="h-auto max-w-full cursor-crosshair rounded-lg" />
+      <canvas ref={ref} role="button" tabIndex={0} aria-label="Pick image color; arrow keys move the sample, Enter saves it" onKeyDown={(e) => {
+        const directions: Record<string, [number, number]> = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] };
+        const d = directions[e.key]; const c = ref.current; if (!c || (!d && e.key !== "Enter" && e.key !== " ")) return;
+        e.preventDefault(); const p = d ? { x: Math.max(0, Math.min(c.width - 1, point.x + d[0])), y: Math.max(0, Math.min(c.height - 1, point.y + d[1])) } : point;
+        setPoint(p); const data = c.getContext("2d")?.getImageData(p.x, p.y, 1, 1).data; if (!data) return;
+        const color = "#" + [...data].slice(0, 3).map((v) => v.toString(16).padStart(2, "0")).join(""); setCol(color); if (!d) setHist((h) => [color, ...h.filter((x) => x !== color)].slice(0, 10));
+      }} onMouseMove={(e) => setCol(at(e))} onClick={(e) => { const c = at(e); setCol(c); setHist((h) => [c, ...h.filter((x) => x !== c)].slice(0, 10)); }} className="h-auto max-w-full cursor-crosshair rounded-lg" />
       <div className="space-y-3">
         <div className="h-24 rounded-2xl ring-1 ring-border" style={{ background: col ?? "transparent" }} />
         {col && <><div className="font-mono text-sm uppercase">{col}</div><div className="font-mono text-xs text-muted-foreground">{rgb(col)}</div><CopyBtn text={col} /></>}
@@ -197,13 +207,13 @@ export function ImageColorPicker() {
 }
 
 export function ImageMetadataViewer() {
-  const { file, img, err, pick, reset } = useImage();
+  const { file, img, preview, err, pick, reset } = useImage();
   if (!img || !file) return <div className="space-y-3"><FileDrop accept="image/*" onFiles={pick} />{err && <ErrorNote>{err}</ErrorNote>}</div>;
   const g = (a: number, b: number): number => (b ? g(b, a % b) : a);
   const d = g(img.naturalWidth, img.naturalHeight);
   return (
     <div className="space-y-4">
-      <div className="grid h-56 place-items-center rounded-2xl bg-secondary grid-dots"><img src={img.src} alt={file.name} className="max-h-full max-w-full" /></div>
+      <div className="grid h-56 place-items-center rounded-2xl bg-secondary grid-dots">{preview && <img src={preview} alt={file.name} className="max-h-full max-w-full" />}</div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Stat label="File name" value={<span className="break-all text-sm">{file.name}</span>} />
         <Stat label="Type" value={file.type || "unknown"} />

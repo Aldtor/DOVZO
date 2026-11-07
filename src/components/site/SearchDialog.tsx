@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
 import { Search, CornerDownLeft, SearchX } from "lucide-react";
 import { getCategory, popularTools, searchTools, toneClass } from "@/lib/tools";
@@ -8,10 +8,12 @@ import { Button } from "@/components/ui/button";
 export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const [q, setQ] = useState("");
   const [idx, setIdx] = useState(0);
+  const listRef = useRef<HTMLDivElement>(null);
   const nav = useNavigate();
   const matches = q.trim() ? searchTools(q) : popularTools.slice(0, 6);
   const results = matches.slice(0, 8);
   useEffect(() => { if (open) { setQ(""); setIdx(0); } }, [open]);
+  useEffect(() => { listRef.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ block: "nearest" }); }, [idx, q]);
   const go = (slug: string) => { onClose(); nav({ to: "/tools/$slug", params: { slug } }); };
 
   return (
@@ -29,8 +31,8 @@ export function SearchDialog({ open, onClose }: { open: boolean; onClose: () => 
             }} placeholder="Search 50 tools…" className="h-16 min-w-0 flex-1 bg-transparent text-base outline-none placeholder:text-muted-foreground" />
         </div>
         <div className="max-h-[min(60dvh,520px)] overflow-y-auto p-2">
-          <p className="px-3 py-3 text-xs font-medium text-muted-foreground">{q.trim() ? `${matches.length} matching tools` : "Popular tools"}</p>
-          <div id="tool-search-results" role="listbox" aria-label="Tools">
+          <p role="status" className="px-3 py-3 text-xs font-medium text-muted-foreground">{q.trim() ? `${matches.length} matching tools` : "Popular tools"}</p>
+          <div ref={listRef} id="tool-search-results" role="listbox" aria-label="Tools">
             {results.length === 0 && <div className="flex flex-col items-center gap-3 px-4 py-10 text-center"><SearchX className="h-6 w-6 text-muted-foreground" /><p className="text-sm font-medium">No tools found</p><p className="text-xs text-muted-foreground">Try a different search.</p></div>}
             {results.map((r, i) => {
               const cat = getCategory(r.category);

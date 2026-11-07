@@ -1,14 +1,17 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Check, Copy, Download, Upload, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { validateFileBudget } from "@/lib/tool-processing";
 
 export function download(data: Blob | string, filename: string) {
   const url = typeof data === "string" ? data : URL.createObjectURL(data);
   const a = document.createElement("a");
   a.href = url;
   a.download = filename;
-  a.click();
-  if (typeof data !== "string") setTimeout(() => URL.revokeObjectURL(url), 30000);
+  a.hidden = true;
+  document.body.appendChild(a);
+  try { a.click(); }
+  finally { a.remove(); if (typeof data !== "string") setTimeout(() => URL.revokeObjectURL(url), 1000); }
 }
 
 export const fmtBytes = (n: number) =>
@@ -17,7 +20,9 @@ export const fmtBytes = (n: number) =>
 export function acceptsFile(file: File, accept?: string) {
   return !accept || accept.split(",").some((rule) => {
     const r = rule.trim().toLowerCase();
-    return r.startsWith(".") ? file.name.toLowerCase().endsWith(r) : r.endsWith("/*") ? file.type.toLowerCase().startsWith(r.slice(0, -1)) : file.type.toLowerCase() === r || ({ "application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "application/zip": ".zip" }[r] && file.name.toLowerCase().endsWith({ "application/pdf": ".pdf", "image/png": ".png", "image/jpeg": ".jpg", "application/zip": ".zip" }[r] ?? "")) || (r === "image/jpeg" && file.name.toLowerCase().endsWith(".jpeg"));
+    const extensions: Record<string, string[]> = { "image/*": ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif", "svg"], "audio/*": ["mp3", "wav", "ogg", "m4a", "aac", "flac", "opus"], "video/*": ["mp4", "webm", "mov", "m4v", "ogv"], "application/pdf": ["pdf"], "application/zip": ["zip"], "image/png": ["png"], "image/jpeg": ["jpg", "jpeg"] };
+    const byName = (extensions[r] ?? []).some((ext) => file.name.toLowerCase().endsWith(`.${ext}`));
+    return r.startsWith(".") ? file.name.toLowerCase().endsWith(r) : r.endsWith("/*") ? file.type.toLowerCase().startsWith(r.slice(0, -1)) || (!file.type && byName) : file.type.toLowerCase() === r || (!file.type && byName);
   });
 }
 
@@ -26,14 +31,16 @@ export function FileDrop({ accept, multiple, onFiles, label, disabled = false }:
   const [over, setOver] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const receiving = useRef(false);
   const locked = disabled || loading;
   const receive = async (files: File[]) => {
-    if (locked || !files.length) return;
+    if (locked || receiving.current || !files.length) return;
+    try { validateFileBudget(multiple ? files : files.slice(0, 1)); } catch (e) { setError((e as Error).message); return; }
     if (files.some((f) => !acceptsFile(f, accept))) { setError(`Choose a supported file (${accept}).`); return; }
-    setError(""); setLoading(true);
+    setError(""); receiving.current = true; setLoading(true);
     try { await onFiles(multiple ? files : files.slice(0, 1)); }
     catch (e) { setError(e instanceof Error ? e.message : "The file could not be opened."); }
-    finally { setLoading(false); }
+    finally { receiving.current = false; setLoading(false); }
   };
   return (
     <div className="space-y-3">
@@ -54,6 +61,7 @@ export function FileDrop({ accept, multiple, onFiles, label, disabled = false }:
       <div>
         <p className="font-medium">{loading ? "Opening files…" : label ?? (multiple ? "Drop files here or click to choose" : "Drop a file here or click to choose")}</p>
         <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5 shrink-0" />Files stay on your device</p>
+        <p className="mt-1 text-xs text-muted-foreground">Up to 100 MiB per selection</p>
       </div>
       <input ref={ref} type="file" hidden accept={accept} multiple={multiple} disabled={locked}
         onChange={(e) => { void receive(Array.from(e.target.files ?? [])); e.target.value = ""; }} />
@@ -74,9 +82,11 @@ export function DownloadBtn({ onClick, children = "Download" }: { onClick: () =>
 export function CopyBtn({ text }: { text: string }) {
   const [ok, setOk] = useState(false);
   const [error, setError] = useState("");
+  const timer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  useEffect(() => { setOk(false); setError(""); return () => clearTimeout(timer.current); }, [text]);
   return (
     <span className="inline-flex flex-col gap-1">
-    <Btn variant="ghost" disabled={!text} onClick={async () => { setError(""); try { await navigator.clipboard.writeText(text); setOk(true); setTimeout(() => setOk(false), 1200); } catch { setError("Copy failed. Select and copy the result manually."); } }}>
+    <Btn variant="ghost" disabled={!text} onClick={async () => { setError(""); try { await navigator.clipboard.writeText(text); setOk(true); clearTimeout(timer.current); timer.current = setTimeout(() => setOk(false), 1200); } catch { setError("Copy failed. Select and copy the result manually."); } }}>
       {ok ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}{ok ? "Copied" : "Copy"}
     </Btn>
     {error && <span role="alert" className="text-xs text-destructive">{error}</span>}
@@ -115,7 +125,7 @@ export function loadImage(file: File | string): Promise<HTMLImageElement> {
   const url = typeof file === "string" ? file : URL.createObjectURL(file);
   return new Promise((res, rej) => {
     const img = new Image();
-    img.onload = () => res(img);
+    img.onload = () => { if (typeof file !== "string") URL.revokeObjectURL(url); if (img.naturalWidth * img.naturalHeight > 40000000) { rej(new Error("This image exceeds 40 megapixels. Choose a smaller image.")); return; } res(img); };
     img.onerror = () => { if (typeof file !== "string") URL.revokeObjectURL(url); rej(new Error("This file could not be read as an image.")); };
     img.src = url;
   });

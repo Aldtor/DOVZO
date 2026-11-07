@@ -4,6 +4,7 @@ import { ToolCard } from "@/components/site/ToolCard";
 import { getCategory, getTool, relatedTools, toneClass } from "@/lib/tools";
 import { toolComponents } from "@/components/tools/registry";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Suspense } from "react";
 
 export const Route = createFileRoute("/tools/$slug")({
   loader: ({ params }) => {
@@ -57,7 +58,7 @@ function ToolPage() {
         <span className="flex w-full items-center gap-1.5 py-1 md:w-auto text-xs font-medium text-success"><ShieldCheck className="h-4 w-4" /> Free · runs on your device</span>
       </header>
 
-      <div className="tool-workspace bento mt-6 p-4 sm:p-6 md:mt-8" aria-label={`${tool.name} workspace`}><Comp /></div>
+      <div className="tool-workspace bento mt-6 p-4 sm:p-6 md:mt-8" role="region" aria-label={`${tool.name} workspace`}><Suspense fallback={<p role="status" className="flex min-h-60 items-center justify-center text-sm text-muted-foreground">Loading workspace…</p>}><Comp key={slug} /></Suspense></div>
 
       <div className="mt-10 grid gap-6 border-t border-border pt-6 md:grid-cols-3">
         <div className="md:col-span-2">

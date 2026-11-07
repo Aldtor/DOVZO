@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { encodeBase64, decodeBase64 } from "@/lib/tool-processing";
 import { Area, Btn, CopyBtn, ErrorNote, Field, Select, inputCls } from "./kit";
 
@@ -159,22 +159,25 @@ export function RegexTester() {
   const [pat, setPat] = useState("\\b\\w+@\\w+\\.\\w+\\b");
   const [flags, setFlags] = useState("g");
   const [text, setText] = useState("Contact hello@dovzo.com or support@example.org");
-  const res = useMemo(() => {
-    try {
-      const re = new RegExp(pat, flags);
-      const ms: RegExpExecArray[] = [];
-      let match: RegExpExecArray | null;
-      while ((match = re.exec(text)) !== null) {
-        ms.push(match);
-        if (!re.global || ms.length >= 1000) break;
-        if (!match[0]) re.lastIndex += re.unicode ? ([...text.slice(re.lastIndex)][0]?.length ?? 1) : 1;
-      }
-      const nodes: React.ReactNode[] = []; let last = 0;
-      ms.forEach((m, i) => { nodes.push(text.slice(last, m.index)); nodes.push(<mark key={i} className="rounded bg-primary/25 text-foreground">{m[0]}</mark>); last = m.index + m[0].length; });
-      nodes.push(text.slice(last));
-      return { ms, nodes };
-    } catch (e) { return { err: (e as Error).message }; }
+  const [res, setRes] = useState<{ matches?: { index: number; value: string }[]; error?: string }>({ matches: [] });
+  const [busy, setBusy] = useState(false);
+  useEffect(() => {
+    let worker: Worker | undefined; let timeout: ReturnType<typeof setTimeout> | undefined;
+    setBusy(true); setRes({ matches: [] });
+    const debounce = setTimeout(() => {
+      try {
+        worker = new Worker(new URL("../../lib/regex.worker.ts", import.meta.url), { type: "module" });
+        worker.onmessage = (event: MessageEvent<typeof res>) => { clearTimeout(timeout); setRes(event.data); setBusy(false); worker?.terminate(); };
+        worker.onerror = () => { clearTimeout(timeout); setRes({ error: "Regex processing is unavailable in this browser." }); setBusy(false); worker?.terminate(); };
+        timeout = setTimeout(() => { worker?.terminate(); setRes({ error: "This expression took too long. Simplify it or shorten the input." }); setBusy(false); }, 2000);
+        worker.postMessage({ pattern: pat, flags, text });
+      } catch { setRes({ error: "Regex processing is unavailable in this browser." }); setBusy(false); }
+    }, 150);
+    return () => { clearTimeout(debounce); clearTimeout(timeout); worker?.terminate(); };
   }, [pat, flags, text]);
+  const nodes: React.ReactNode[] = []; let last = 0;
+  (res.matches ?? []).forEach((match, i) => { nodes.push(text.slice(last, match.index)); nodes.push(<mark key={i} className="rounded bg-primary/25 text-foreground">{match.value}</mark>); last = match.index + match.value.length; });
+  nodes.push(text.slice(last));
   return (
     <div className="space-y-4">
       <div className="flex gap-3">
@@ -182,9 +185,9 @@ export function RegexTester() {
         <Field label="Flags"><input value={flags} onChange={(e) => setFlags(e.target.value.replace(/[^gimsuy]/g, ""))} className={`${inputCls} w-20 font-mono`} /></Field>
       </div>
       <Area value={text} onChange={setText} rows={6} />
-      {"err" in res ? <ErrorNote>{res.err}</ErrorNote> : <>
-        <div className="whitespace-pre-wrap rounded-xl bg-secondary p-3 text-sm">{res.nodes}</div>
-        <p className="text-sm text-muted-foreground">{res.ms?.length ?? 0} match(es){res.ms?.length === 1000 ? " · first 1,000 shown" : ""}</p>
+      {busy ? <p role="status" className="text-sm text-muted-foreground">Checking expression…</p> : res.error ? <ErrorNote>{res.error}</ErrorNote> : <>
+        <div className="whitespace-pre-wrap rounded-xl bg-secondary p-3 text-sm">{nodes}</div>
+        <p role="status" className="text-sm text-muted-foreground">{res.matches?.length ?? 0} match(es){res.matches?.length === 1000 ? " · first 1,000 shown" : ""}</p>
       </>}
     </div>
   );
