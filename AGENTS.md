@@ -34,3 +34,6 @@ use the editor.
 - Shared tool controls use the design-system Button through kit.tsx, and the tool-workspace frame owns common containment and preview styling — keeps all tools visually consistent without changing processing.
 - Shared processing validation and secure random sampling live in tool-processing.ts and have regression tests; accepted uploads are checked by FileDrop before processing to prevent invalid or stale downloads.
 - The admin route reports unavailable configuration without mock authentication or settings; real administration requires enabled Cloud and secure authorization.
+- Tool workspaces are lazily registered by module; processing dependencies load only in the actions that need them, so unrelated tools never fetch PDF, archive, QR, barcode, or GIF engines.
+- Browser preferences use guarded, validated storage helpers; files remain transient browser state, so denied storage never prevents tool use.
+- Media jobs cancel on unmount and release workers, streams, canvases, and object URLs; previews use blobs where practical to avoid Base64 memory duplication.

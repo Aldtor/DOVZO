@@ -6,6 +6,7 @@ import { PageHeader, meta } from "@/components/site/PageHeader";
 import { categories, getCategory, searchTools, tools, toneClass, type CategoryId } from "@/lib/tools";
 import { inputCls } from "@/components/tools/kit";
 import { Button } from "@/components/ui/button";
+import { readFavorites, savePreference } from "@/lib/browser-storage";
 
 export const Route = createFileRoute("/tools/")({
   head: () => meta("All 50 free tools — DOVZO", "Browse every DOVZO tool: image, PDF, text, developer, generators and file & media utilities."),
@@ -18,8 +19,8 @@ function AllTools() {
   const [sort, setSort] = useState("popular");
   const [view, setView] = useState<"grid" | "list">("grid");
   const [favs, setFavs] = useState<string[]>([]);
-  useEffect(() => { try { setFavs(JSON.parse(localStorage.getItem("dovzo-favs") ?? "[]")); } catch { /* ignore */ } }, []);
-  const toggleFav = (s: string) => { const n = favs.includes(s) ? favs.filter((x) => x !== s) : [...favs, s]; setFavs(n); localStorage.setItem("dovzo-favs", JSON.stringify(n)); };
+  useEffect(() => { setFavs(readFavorites()); }, []);
+  const toggleFav = (s: string) => { const n = favs.includes(s) ? favs.filter((x) => x !== s) : [...favs, s]; setFavs(n); savePreference("dovzo-favs", JSON.stringify(n)); };
 
   const list = useMemo(() => {
     let l = q ? searchTools(q) : [...tools];

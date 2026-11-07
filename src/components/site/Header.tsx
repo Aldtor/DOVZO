@@ -4,6 +4,7 @@ import { Menu, Moon, Search, Sun, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
 import { SearchDialog } from "./SearchDialog";
+import { savePreference } from "@/lib/browser-storage";
 
 const nav = [
   { to: "/", label: "Home" },
@@ -22,6 +23,7 @@ export function Header() {
     setDark(document.documentElement.classList.contains("dark"));
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setSearch(true); }
+      if (e.key === "Escape") setMenu(false);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -31,7 +33,7 @@ export function Header() {
     const next = !dark;
     setDark(next);
     document.documentElement.classList.toggle("dark", next);
-    localStorage.setItem("dovzo-theme", next ? "dark" : "light");
+    savePreference("dovzo-theme", next ? "dark" : "light");
   };
 
   return (
@@ -39,7 +41,7 @@ export function Header() {
       <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
         <div className="mx-auto flex h-16 max-w-6xl items-center gap-3 px-5 sm:px-6">
           <Logo />
-          <nav className="ml-6 hidden items-center gap-1 md:flex">
+          <nav aria-label="Main navigation" className="ml-6 hidden items-center gap-1 md:flex">
             {nav.map((n) => (
               <Link key={n.to} to={n.to} activeOptions={{ exact: n.to === "/" }}
                 className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
@@ -62,7 +64,7 @@ export function Header() {
           </div>
         </div>
         {menu && (
-          <nav id="mobile-navigation" className="mx-5 mb-3 flex flex-col gap-1 border-t border-border pt-3 md:hidden">
+          <nav id="mobile-navigation" aria-label="Mobile navigation" className="mx-5 mb-3 flex flex-col gap-1 border-t border-border pt-3 md:hidden">
             {nav.map((n) => (
               <Link key={n.to} to={n.to} onClick={() => setMenu(false)} activeOptions={{ exact: n.to === "/" }} activeProps={{ className: "bg-secondary text-foreground" }} className="rounded-lg px-3 py-2.5 text-sm">{n.label}</Link>
             ))}
