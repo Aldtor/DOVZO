@@ -7,11 +7,13 @@ function useImage() {
   const [file, setFile] = useState<File | null>(null);
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [err, setErr] = useState("");
+  const [preview, setPreview] = useState("");
+  useEffect(() => { if (!file) { setPreview(""); return; } const url = URL.createObjectURL(file); setPreview(url); return () => URL.revokeObjectURL(url); }, [file]);
   const pick = async (fs: File[]) => {
     const f = fs[0]; if (!f) return;
     try { setImg(await loadImage(f)); setFile(f); setErr(""); } catch (e) { setErr((e as Error).message); }
   };
-  return { file, img, err, pick, reset: () => { setFile(null); setImg(null); } };
+  return { file, img, preview, err, pick, reset: () => { setFile(null); setImg(null); } };
 }
 
 type Draw = (img: HTMLImageElement) => HTMLCanvasElement;
@@ -26,7 +28,7 @@ function render(img: HTMLImageElement, w: number, h: number, fn?: (ctx: CanvasRe
 }
 
 function ImageTool({ controls, draw, type, quality, suffix, onImage }: { controls?: (img: HTMLImageElement) => React.ReactNode; draw: Draw; type?: string; quality?: number; suffix: string; onImage?: (img: HTMLImageElement) => void }) {
-  const { file, img, err, pick, reset } = useImage();
+  const { file, img, preview, err, pick, reset } = useImage();
   const [out, setOut] = useState<{ blob: Blob; url: string } | null>(null);
   const [processingError, setProcessingError] = useState("");
   const outputUrl = useRef("");
@@ -58,7 +60,7 @@ function ImageTool({ controls, draw, type, quality, suffix, onImage }: { control
       {processingError && <ErrorNote>{processingError}</ErrorNote>}
       {controls && <div className="flex flex-wrap items-end gap-4">{controls(img)}</div>}
       <div className="grid gap-4 md:grid-cols-2">
-        <figure className="space-y-2"><div className="grid h-72 place-items-center overflow-hidden rounded-2xl bg-secondary grid-dots"><img src={img.src} alt="Original" className="max-h-full max-w-full object-contain" /></div><figcaption className="text-xs text-muted-foreground">Original · {img.naturalWidth}×{img.naturalHeight} · {fmtBytes(file.size)}</figcaption></figure>
+        <figure className="space-y-2"><div className="grid h-72 place-items-center overflow-hidden rounded-2xl bg-secondary grid-dots">{preview && <img src={preview} alt="Original" className="max-h-full max-w-full object-contain" />}</div><figcaption className="text-xs text-muted-foreground">Original · {img.naturalWidth}×{img.naturalHeight} · {fmtBytes(file.size)}</figcaption></figure>
         <figure className="space-y-2"><div className="grid h-72 place-items-center overflow-hidden rounded-2xl bg-secondary grid-dots">{out && <img src={out.url} alt="Result" className="max-h-full max-w-full object-contain" />}</div>
           <figcaption className="text-xs text-muted-foreground">Result · {out ? fmtBytes(out.blob.size) : "…"}{out && file.size ? ` (${Math.round((1 - out.blob.size / file.size) * 100)}% smaller)`.replace("(-", "(+").replace("smaller", out.blob.size > file.size ? "larger" : "smaller") : ""}</figcaption></figure>
       </div>
@@ -205,13 +207,13 @@ export function ImageColorPicker() {
 }
 
 export function ImageMetadataViewer() {
-  const { file, img, err, pick, reset } = useImage();
+  const { file, img, preview, err, pick, reset } = useImage();
   if (!img || !file) return <div className="space-y-3"><FileDrop accept="image/*" onFiles={pick} />{err && <ErrorNote>{err}</ErrorNote>}</div>;
   const g = (a: number, b: number): number => (b ? g(b, a % b) : a);
   const d = g(img.naturalWidth, img.naturalHeight);
   return (
     <div className="space-y-4">
-      <div className="grid h-56 place-items-center rounded-2xl bg-secondary grid-dots"><img src={img.src} alt={file.name} className="max-h-full max-w-full" /></div>
+      <div className="grid h-56 place-items-center rounded-2xl bg-secondary grid-dots">{preview && <img src={preview} alt={file.name} className="max-h-full max-w-full" />}</div>
       <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
         <Stat label="File name" value={<span className="break-all text-sm">{file.name}</span>} />
         <Stat label="Type" value={file.type || "unknown"} />
