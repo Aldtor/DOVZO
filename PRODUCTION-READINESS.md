@@ -15,6 +15,7 @@
 ## Verification
 
 - Regression suite: 18 tests passed across four files in the final run.
+- Fresh verification: TypeScript project check completed with no diagnostics; all 18 regression tests passed again.
 - Preview build/type diagnostics: latest available entry reports **build OK**.
 - Earlier audit visited 142 desktop/mobile route combinations without JavaScript errors or horizontal overflow; automated accessibility checks covered tool/content pages and representative populated workspaces without reported violations.
 - Earlier real-input checks exercised the 50 tools, including 22 file downloads across image, PDF, archive, audio, video, GIF, QR and barcode workflows.

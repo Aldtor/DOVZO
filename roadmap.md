@@ -10,6 +10,6 @@
 - [x] Repair verified frontend issues and add focused regression coverage.
 - [x] Verify all routes at desktop/mobile sizes and real processing/download flows.
 - [x] Provide production-readiness report with remaining Cloud, contact, and advertising setup requirements.
-- [ ] Measure deployed production bundle size and cross-browser behavior — requires the production artifact/deployment and target devices.
+- [ ] Measure deployed production bundle size and cross-browser behavior — blocked until the app is published and tested on target browsers/devices.
 - [x] Answer the latest remix question: finish readiness checks, review requirements, then publish.
 - [x] Answer the repeated remix question: review on a phone, replace contact placeholders, then publish.
