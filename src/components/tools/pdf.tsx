@@ -89,7 +89,8 @@ export function PdfPageExtractor() {
 export function PdfPageReorder() {
   const [order, setOrder] = useState<number[] | null>(null); const { busy, err, run } = useBusy();
   return <SinglePdf>{(f, doc) => {
-    const o = order ?? doc.getPageIndices();
+    const indices = doc.getPageIndices();
+    const o = order && order.length === indices.length && order.every((p) => indices.includes(p)) ? order : indices;
     return <>
       <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">{o.map((p, i) => (
         <div key={p} className="bento flex flex-col items-center gap-2 p-3 text-sm"><span className="text-lg font-semibold">{p + 1}</span>

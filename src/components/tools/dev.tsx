@@ -2,16 +2,16 @@ import { useMemo, useRef, useState } from "react";
 import { encodeBase64, decodeBase64 } from "@/lib/tool-processing";
 import { Area, Btn, CopyBtn, ErrorNote, Field, Select, inputCls } from "./kit";
 
-function parseJson(s: string): { v?: unknown; err?: string } {
-  if (!s.trim()) return {};
-  try { return { v: JSON.parse(s) }; } catch (e) { return { err: (e as Error).message }; }
+function parseJson(s: string): { ok: boolean; v?: unknown; err?: string } {
+  if (!s.trim()) return { ok: false };
+  try { return { ok: true, v: JSON.parse(s) }; } catch (e) { return { ok: false, err: (e as Error).message }; }
 }
 
 export function JsonFormatter() {
   const [v, setV] = useState("");
   const [ind, setInd] = useState("2");
   const r = parseJson(v);
-  const out = r.v !== undefined ? JSON.stringify(r.v, null, ind === "tab" ? "\t" : +ind) : "";
+  const out = r.ok ? JSON.stringify(r.v, null, ind === "tab" ? "\t" : +ind) : "";
   return (
     <div className="space-y-4">
       <div className="flex items-end gap-3"><Field label="Indent"><Select value={ind} onChange={setInd} options={[["2", "2 spaces"], ["4", "4 spaces"], ["tab", "Tab"]]} /></Field><CopyBtn text={out} /></div>
@@ -31,7 +31,7 @@ export function JsonValidator() {
     <div className="space-y-4">
       <Area value={v} onChange={setV} mono rows={14} placeholder="Paste JSON to validate" />
       {r.err && <ErrorNote>Invalid JSON — {r.err}</ErrorNote>}
-      {r.v !== undefined && <p className="rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Valid JSON · {Array.isArray(r.v) ? `array of ${r.v.length}` : typeof r.v === "object" && r.v ? `object with ${Object.keys(r.v).length} keys` : typeof r.v}</p>}
+      {r.ok && <p className="rounded-xl border border-success/30 bg-success/10 px-3 py-2 text-sm text-success">Valid JSON · {Array.isArray(r.v) ? `array of ${r.v.length}` : typeof r.v === "object" && r.v ? `object with ${Object.keys(r.v).length} keys` : typeof r.v}</p>}
     </div>
   );
 }
@@ -39,7 +39,7 @@ export function JsonValidator() {
 export function JsonMinifier() {
   const [v, setV] = useState("");
   const r = parseJson(v);
-  const out = r.v !== undefined ? JSON.stringify(r.v) : "";
+  const out = r.ok ? JSON.stringify(r.v) : "";
   return (
     <div className="space-y-4">
       {r.err && <ErrorNote>{r.err}</ErrorNote>}
