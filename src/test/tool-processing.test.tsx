@@ -10,7 +10,7 @@ describe("DOVZO catalog integrity", () => {
     expect(tools).toHaveLength(50);
     expect(new Set(tools.map((t) => t.slug)).size).toBe(50);
     expect(Object.keys(toolComponents).sort()).toEqual(tools.map((t) => t.slug).sort());
-    for (const tool of tools) expect(typeof toolComponents[tool.slug]).toBe("function");
+    for (const tool of tools) expect(toolComponents[tool.slug]).toHaveProperty("$$typeof", Symbol.for("react.lazy"));
   });
   it("links every tool to a real category", () => {
     for (const tool of tools) expect(categories.some((c) => c.id === tool.category)).toBe(true);
