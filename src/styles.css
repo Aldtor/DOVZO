@@ -70,7 +70,7 @@
 }
 
 :root {
-  --radius: 0.5rem;
+  --radius: 0.875rem;
   --background: oklch(0.982 0.003 270);
   --foreground: oklch(0.215 0.03 275);
   --card: oklch(1 0 0);
@@ -96,8 +96,8 @@
   --ring: oklch(0.565 0.215 280);
   --glass: oklch(1 0 0 / 0.72);
   --glass-border: oklch(1 0 0 / 0.6);
-  --shadow-soft: 0 1px 3px oklch(0.215 0.03 275 / 0.035);
-  --shadow-lift: 0 6px 20px -6px oklch(0.215 0.03 275 / 0.12);
+  --shadow-soft: 0 2px 3px oklch(0.215 0.03 275 / 0.025), 0 10px 28px -18px oklch(0.215 0.03 275 / 0.15);
+  --shadow-lift: 0 14px 35px -16px oklch(0.215 0.03 275 / 0.22);
   --gradient-brand: linear-gradient(135deg, oklch(0.565 0.215 280), oklch(0.65 0.14 245) 60%, oklch(0.73 0.1 210));
   --chart-1: oklch(0.565 0.215 280);
   --chart-2: oklch(0.65 0.14 245);
@@ -166,7 +166,7 @@
 @layer base {
   html { font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
   body { line-height: 1.6; }
-  h1, h2, h3 { letter-spacing: 0; line-height: 1.25; text-wrap: balance; }
+  h1, h2, h3 { letter-spacing: -0.025em; line-height: 1.25; text-wrap: balance; }
   button, input, select, textarea { font: inherit; }
   input, select, textarea { min-width: 0; }
   input[type="range"], input[type="checkbox"] { accent-color: var(--primary); }
@@ -225,3 +225,15 @@
   *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
   .bento-hover:hover { transform: none; }
 }
+
+/* A restrained Bento system: generous space, quiet surfaces, clear hierarchy. */
+.home-hero { border-bottom: 1px solid var(--border); background: radial-gradient(ellipse at 85% 25%, color-mix(in oklab, var(--primary) 9%, transparent), transparent 55%), var(--background); }
+.hero-tool-grid > a:first-child { background: linear-gradient(145deg, var(--card), color-mix(in oklab, var(--primary) 7%, var(--card))); }
+.hero-tool-grid > a { border-radius: 20px; }
+.tool-workspace { box-shadow: var(--shadow-soft); border-top: 3px solid color-mix(in oklab, var(--primary) 55%, var(--border)); }
+.tool-workspace textarea { transition: border-color .2s, box-shadow .2s; }
+.tool-workspace textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 4px color-mix(in oklab, var(--primary) 8%, transparent); }
+.file-drop { background-image: radial-gradient(circle at center, color-mix(in oklab, var(--primary) 5%, transparent), transparent 75%); }
+.file-drop[aria-disabled="true"] { cursor: wait; opacity: .65; }
+.tool-workspace [role="alert"] { line-height: 1.65; }
+::selection { background: color-mix(in oklab, var(--primary) 20%, transparent); }

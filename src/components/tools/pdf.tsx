@@ -187,7 +187,7 @@ export function PdfToImages() {
   const zipAll = () => run(async () => { if (!f) return; const { default: JSZip } = await import("jszip"); const z = new JSZip(); pages.forEach((p, i) => z.file(`page-${i + 1}.png`, p.blob)); download(await z.generateAsync({ type: "blob" }), `${baseName(f.name)}-images.zip`); });
   return (
     <div className="space-y-4">
-      <div className="flex items-end gap-3"><Field label="Resolution"><Select value={scale} onChange={setScale} options={[["1", "Standard (72 dpi)"], ["2", "High (144 dpi)"], ["3", "Print (216 dpi)"]]} /></Field></div>
+      <div className="flex items-end gap-3"><Field label="Resolution"><Select disabled={busy} value={scale} onChange={setScale} options={[["1", "Standard (72 dpi)"], ["2", "High (144 dpi)"], ["3", "Print (216 dpi)"]]} /></Field>{f && <Btn disabled={busy} onClick={() => convert(f)}>Render at selected resolution</Btn>}</div>
       <FileDrop accept="application/pdf" disabled={busy} onFiles={async (fs) => { if (fs[0]) await convert(fs[0]); }} />
       {err && <ErrorNote>{err}</ErrorNote>}
       {busy && <p className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Rendering page {pages.length + 1}…</p>}

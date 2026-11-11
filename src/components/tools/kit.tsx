@@ -22,7 +22,7 @@ export function acceptsFile(file: File, accept?: string) {
     const r = rule.trim().toLowerCase();
     const extensions: Record<string, string[]> = { "image/*": ["png", "jpg", "jpeg", "webp", "gif", "bmp", "avif", "svg"], "audio/*": ["mp3", "wav", "ogg", "m4a", "aac", "flac", "opus"], "video/*": ["mp4", "webm", "mov", "m4v", "ogv"], "application/pdf": ["pdf"], "application/zip": ["zip"], "image/png": ["png"], "image/jpeg": ["jpg", "jpeg"] };
     const byName = (extensions[r] ?? []).some((ext) => file.name.toLowerCase().endsWith(`.${ext}`));
-    return r.startsWith(".") ? file.name.toLowerCase().endsWith(r) : r.endsWith("/*") ? file.type.toLowerCase().startsWith(r.slice(0, -1)) || (!file.type && byName) : file.type.toLowerCase() === r || (!file.type && byName);
+    return r.startsWith(".") ? file.name.toLowerCase().endsWith(r) : r.endsWith("/*") ? file.type.toLowerCase().startsWith(r.slice(0, -1)) || ((!file.type || file.type === "application/octet-stream") && byName) : file.type.toLowerCase() === r || ((!file.type || file.type === "application/octet-stream") && byName);
   });
 }
 
@@ -55,12 +55,13 @@ export function FileDrop({ accept, multiple, onFiles, label, disabled = false }:
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); setOver(false); void receive(Array.from(e.dataTransfer.files)); }}
-      className={`flex min-h-60 cursor-pointer flex-col items-center justify-center gap-4 rounded-lg border border-dashed px-5 py-8 text-center transition-colors sm:min-h-72 ${over ? "border-primary bg-accent" : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-accent/30"}`}
+      className={`file-drop flex min-h-60 cursor-pointer flex-col items-center justify-center gap-4 rounded-lg border border-dashed px-5 py-8 text-center transition-colors sm:min-h-72 ${over ? "border-primary bg-accent" : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-accent/30"}`}
     >
-      <span className="grid h-12 w-12 place-items-center rounded-lg border border-border bg-card text-primary"><Upload className="h-5 w-5" /></span>
+      <span className="grid h-14 w-14 place-items-center rounded-2xl border border-primary/15 bg-card text-primary shadow-soft"><Upload className="h-5 w-5" /></span>
       <div>
         <p className="font-medium">{loading ? "Opening files…" : label ?? (multiple ? "Drop files here or click to choose" : "Drop a file here or click to choose")}</p>
-        <p className="mt-2 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5 shrink-0" />Files stay on your device</p>
+        <span className="mt-4 inline-flex rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground">{loading ? "Opening…" : multiple ? "Choose files" : "Choose file"}</span>
+        <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5 shrink-0" />Files stay on your device</p>
         <p className="mt-1 text-xs text-muted-foreground">Up to 100 MiB per selection</p>
       </div>
       <input ref={ref} type="file" hidden accept={accept} multiple={multiple} disabled={locked}
@@ -109,8 +110,8 @@ export function Field({ label, children }: { label: string; children: ReactNode 
 
 export const inputCls = "h-10 min-w-0 max-w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring/40";
 
-export function Select({ value, onChange, options }: { value: string; onChange: (v: string) => void; options: [string, string][] }) {
-  return <select value={value} onChange={(e) => onChange(e.target.value)} className={inputCls}>{options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
+export function Select({ value, onChange, options, disabled = false }: { disabled?: boolean; value: string; onChange: (v: string) => void; options: [string, string][] }) {
+  return <select disabled={disabled} value={value} onChange={(e) => onChange(e.target.value)} className={inputCls}>{options.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select>;
 }
 
 export function ErrorNote({ children }: { children: ReactNode }) {

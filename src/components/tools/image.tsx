@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { integerInRange } from "@/lib/tool-processing";
+import { imageDataUrl, integerInRange } from "@/lib/tool-processing";
 import { Area, Btn, CopyBtn, DownloadBtn, ErrorNote, FileDrop, Field, Select, Stat, baseName, canvasBlob, download, extFor, fmtBytes, inputCls, loadImage } from "./kit";
 
 function useImage() {
@@ -158,13 +158,14 @@ export function ImageToBase64() {
 
 export function Base64ToImage() {
   const [v, setV] = useState(""); const [ok, setOk] = useState<boolean | null>(null);
-  const src = v.trim().startsWith("data:") ? v.trim() : v.trim() ? `data:image/png;base64,${v.trim()}` : "";
+  let src = "", error = "";
+  try { src = imageDataUrl(v); } catch (e) { error = e instanceof Error ? e.message : "Invalid image Base64."; }
   return (
     <div className="space-y-4">
       <Area value={v} onChange={(x) => { setV(x); setOk(null); }} mono rows={6} placeholder="data:image/png;base64,… or raw Base64" />
-      {ok === false && <ErrorNote>This Base64 string isn't a readable image.</ErrorNote>}
+      {(error || ok === false) && <ErrorNote>{error || "This Base64 string isn't a readable image."}</ErrorNote>}
       {src && <div className="grid h-64 place-items-center rounded-2xl bg-secondary grid-dots"><img src={src} alt="Decoded" onLoad={() => setOk(true)} onError={() => setOk(false)} className="max-h-full max-w-full" /></div>}
-      {ok && <DownloadBtn onClick={() => download(src, `image.${src.match(/image\/(\w+)/)?.[1] ?? "png"}`)} />}
+      {ok && src && <DownloadBtn onClick={() => { const mime = src.match(/image\/([^;,]+)/)?.[1]; download(src, `image.${mime === "svg+xml" ? "svg" : mime === "jpeg" ? "jpg" : mime ?? "png"}`); }} />}
     </div>
   );
 }

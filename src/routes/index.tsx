@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
 });
 
 const faqs = [
-  ["Is DOVZO free?", "Yes. Every tool is completely free. DOVZO is supported by ads only — there are no plans, credits or paywalls."],
+  ["Is DOVZO free?", "Yes. Every tool is completely free — there are no plans, credits or paywalls."],
   ["Do I need an account?", "No. Open a tool and use it straight away."],
   ["Are files uploaded to a server?", "No. Every tool runs inside your browser, so your files never leave your device."],
   ["Does DOVZO work on mobile?", "Most tools work on phones and tablets. Video recording and supported file codecs depend on your browser, and large files process faster on a computer."],
@@ -30,12 +30,12 @@ function Home() {
   return (
     <>
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="relative mx-auto grid max-w-6xl gap-8 px-5 pb-8 pt-10 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-12 md:pb-10 md:pt-14">
+      <section className="home-hero relative overflow-hidden">
+        <div className="relative mx-auto grid max-w-6xl gap-10 px-5 pb-12 pt-12 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-16 md:pb-16 md:pt-20">
           <div>
-            <span className="inline-flex items-center gap-2 text-xs font-medium text-muted-foreground">50 tools · all free</span>
-            <h1 className="mt-4 text-4xl font-bold leading-[1.15] sm:text-5xl">DOVZO.<br /><span className="text-primary">Tools. No fuss.</span></h1>
-            <p className="mt-4 max-w-lg text-base leading-7 text-muted-foreground">Compress images, merge PDFs, format JSON and make QR codes — right in your browser. Nothing to install, nothing to sign up for.</p>
+            <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-medium text-primary"><Sparkles className="h-3.5 w-3.5" /> YOUR EVERYDAY TOOLKIT</span>
+            <h1 className="mt-6 text-5xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">Small tools.<br /><span className="text-primary">Possibilities, endless.</span></h1>
+            <p className="mt-4 max-w-lg text-base leading-7 text-muted-foreground">A thoughtful collection of 50 free tools for the things you do every day. Create, convert and simplify — privately, in your browser.</p>
             <div className="relative mt-8 max-w-lg">
               <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 shadow-soft focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring/10">
                 <Search className="h-5 w-5 text-muted-foreground" />
@@ -54,7 +54,7 @@ function Home() {
             </div>
           </div>
           {/* Bento preview */}
-          <div className="grid grid-cols-2 gap-3 self-center max-sm:[&>a]:min-h-28 max-sm:[&>a]:row-span-1 max-sm:[&>a]:gap-3 max-sm:[&>a]:p-4">
+          <div className="hero-tool-grid grid grid-cols-2 gap-4 self-center max-sm:[&>a]:min-h-28 max-sm:[&>a]:row-span-1 max-sm:[&>a]:gap-3 max-sm:[&>a]:p-4">
             {featured.map((t, i) => {
               const cat = categories.find((c) => c.id === t.category);
               if (!cat) return null;
@@ -106,7 +106,7 @@ function Home() {
 
       <Section title="Why DOVZO?">
         <div className="grid gap-4 md:grid-cols-4">
-          {[[BadgeCheck, "Completely free", "Every tool, every feature. Ads keep the lights on."], [UserX, "No signup", "No accounts, no emails, no passwords."], [ShieldCheck, "Privacy-first", "Your files are processed on your device and never uploaded."], [Zap, "Simple & fast", "One page, one job. Open it, use it, done."]].map(([I, t, d]) => {
+          {[[BadgeCheck, "Completely free", "Every tool, every feature. No subscriptions or credits."], [UserX, "No signup", "No accounts, no emails, no passwords."], [ShieldCheck, "Privacy-first", "Your files are processed on your device and never uploaded."], [Zap, "Simple & fast", "One page, one job. Open it, use it, done."]].map(([I, t, d]) => {
             const Icon = I as typeof Zap;
             return <div key={t as string} className="border-t border-border pt-5"><span className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-accent-foreground"><Icon className="h-5 w-5" /></span><h3 className="mt-4 font-semibold">{t as string}</h3><p className="mt-1 text-sm text-muted-foreground">{d as string}</p></div>;
           })}
@@ -119,7 +119,7 @@ function Home() {
         </Accordion>
       </Section>
 
-      <section className="mx-auto mt-12 max-w-6xl px-5 sm:px-6 md:mt-16">
+      <section className="mx-auto mt-12 max-w-6xl px-5 sm:px-6 md:mt-20">
         <div className="flex flex-col items-start gap-2 border-y border-border py-8 md:py-10">
           <h2 className="text-2xl font-semibold md:text-3xl">50 tools. Zero sign‑ups.</h2>
           <p className="max-w-md text-muted-foreground">Pick a tool and get it done in seconds.</p>
@@ -132,7 +132,7 @@ function Home() {
 
 function Section({ title, link, children }: { title: string; link?: { to: "/popular" | "/categories" | "/new"; label: string }; children: React.ReactNode }) {
   return (
-    <section className="mx-auto mt-12 max-w-6xl px-5 sm:px-6 md:mt-16">
+    <section className="mx-auto mt-12 max-w-6xl px-5 sm:px-6 md:mt-20">
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-xl font-semibold md:text-2xl">{title}</h2>
         {link && <Link to={link.to} className="flex items-center gap-1 text-sm font-medium text-primary">{link.label}<ArrowRight className="h-4 w-4" /></Link>}

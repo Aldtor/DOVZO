@@ -53,3 +53,23 @@ export function generatePassword(length: number, sets: string[]) {
   }
   return chars.join("");
 }
+// Raw Base64 has no MIME metadata. Identify supported raster signatures before
+// constructing a data URL so downloads retain the actual format.
+export function imageDataUrl(value: string) {
+  const text = value.trim();
+  if (!text) return "";
+  if (text.startsWith("data:")) {
+    if (!/^data:image\/(?:png|jpeg|webp|gif|bmp|avif|svg\+xml|x-icon)(?:;[^,]*)?,/i.test(text)) throw new Error("Enter an image data URL or raw image Base64.");
+    return text;
+  }
+  const raw = text.replace(/\s/g, "");
+  const head = atob(raw.slice(0, 48));
+  const mime = head.startsWith("\x89PNG") ? "png"
+    : head.startsWith("\xff\xd8\xff") ? "jpeg"
+    : head.startsWith("GIF8") ? "gif"
+    : head.startsWith("RIFF") && head.slice(8, 12) === "WEBP" ? "webp"
+    : head.startsWith("BM") ? "bmp"
+    : head.slice(4, 8) === "ftyp" && /avif|avis/.test(head.slice(8)) ? "avif" : null;
+  if (!mime) throw new Error("Unrecognized image. Paste a complete image data URL or PNG, JPG, GIF, WebP, BMP or AVIF Base64.");
+  return `data:image/${mime};base64,${raw}`;
+}
