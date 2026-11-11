@@ -10,7 +10,7 @@ export function ToolCard({ tool, compact = false }: { tool: Tool; compact?: bool
     <Link
       to="/tools/$slug"
       params={{ slug: tool.slug }}
-      className={`bento bento-hover group relative flex h-full flex-col gap-4 p-5 ${compact ? "min-h-40" : "min-h-56"}`}
+      className={`bento bento-hover group relative flex h-full flex-col gap-4 p-5 ${compact ? "min-h-40" : "min-h-52"}`}
     >
       <div className="flex items-start justify-between">
         <span className={`grid h-10 w-10 place-items-center rounded-lg ${toneClass[cat.tone]}`}>
@@ -20,10 +20,12 @@ export function ToolCard({ tool, compact = false }: { tool: Tool; compact?: bool
       </div>
       <div>
         <h3 className="text-[15px] font-semibold leading-6">{tool.name}</h3>
-        {!compact && <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{tool.description}</p>}
+        {!compact && (
+          <p className="mt-1.5 text-sm leading-6 text-muted-foreground">{tool.description}</p>
+        )}
       </div>
-      <div className="mt-auto flex flex-wrap items-center gap-3 pt-1 text-xs text-muted-foreground">
-        <span>{cat.short}</span>
+      <div className="mt-auto flex flex-wrap items-center gap-3 border-t border-border/60 pt-3 text-xs text-muted-foreground">
+        <span className="rounded-md bg-secondary px-2 py-1">{cat.short}</span>
         {tool.popular && (
           <span className="flex items-center gap-1 text-primary">
             <TrendingUp className="h-3 w-3" /> Popular

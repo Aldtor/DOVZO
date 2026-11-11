@@ -1,143 +1,271 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, BadgeCheck, Code2, GraduationCap, Palette, Search, ShieldCheck, Sparkles, UserX, Zap, Briefcase } from "lucide-react";
+import { ArrowRight, ArrowUpRight, Check, Search, ShieldCheck, Sparkles, Zap } from "lucide-react";
 import { useState } from "react";
 import { ToolCard } from "@/components/site/ToolCard";
+import { SearchDialog } from "@/components/site/SearchDialog";
 import { meta } from "@/components/site/PageHeader";
-import { categories, getTool, popularTools, recentTools, searchTools, toneClass, toolsIn } from "@/lib/tools";
-import { useNavigate } from "@tanstack/react-router";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { categories, getTool, popularTools, toneClass, toolsIn } from "@/lib/tools";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/")({
-  head: () => meta("DOVZO — 50 free online tools. No fuss.", "Compress images, merge PDFs, format JSON, make QR codes and more. Free, private, no signup."),
+  head: () =>
+    meta(
+      "DOVZO — Your everyday toolkit",
+      "50 free tools for images, PDFs, text, code and media. Work privately in your browser. No signup.",
+    ),
   component: Home,
 });
 
+const shortcuts = ["image-compressor", "pdf-merger", "qr-code-generator", "zip-creator"];
 const faqs = [
-  ["Is DOVZO free?", "Yes. Every tool is completely free — there are no plans, credits or paywalls."],
-  ["Do I need an account?", "No. Open a tool and use it straight away."],
-  ["Are files uploaded to a server?", "No. Every tool runs inside your browser, so your files never leave your device."],
-  ["Does DOVZO work on mobile?", "Most tools work on phones and tablets. Video recording and supported file codecs depend on your browser, and large files process faster on a computer."],
-  ["What file formats are supported?", "Common formats like JPG, PNG, WebP, PDF, ZIP, MP3, WAV, MP4 and WebM. Each tool lists what it accepts."],
-  ["Are there usage limits?", "There are no paid quotas. Individual tools have practical limits, such as 15-second GIF clips, and large files depend on your device's memory."],
+  [
+    "Is every tool really free?",
+    "Yes. All 50 tools are free, with no subscriptions, credits or sign-up requirements.",
+  ],
+  [
+    "Where do my files go?",
+    "Your selected files are processed locally in your browser. DOVZO does not upload them to a server. Downloaded results are saved wherever your browser normally saves files.",
+  ],
+  [
+    "Can I use DOVZO on my phone?",
+    "Yes, most tools work in modern mobile browsers. Video recording and supported codecs depend on your browser. Large files work best on a computer.",
+  ],
+  [
+    "What are the file limits?",
+    "File selections are limited to 100 MiB. Image processing has dimension limits, and GIF clips are limited to 15 seconds. Each workspace explains its supported formats and processing options.",
+  ],
 ];
 
 function Home() {
-  const [q, setQ] = useState("");
-  const nav = useNavigate();
-  const hits = q ? searchTools(q).slice(0, 5) : [];
-  const featured = ["image-compressor", "pdf-merger", "qr-code-generator", "json-formatter"].map((s) => getTool(s)).filter((t) => t !== undefined);
-
+  const [search, setSearch] = useState(false);
   return (
     <>
-      {/* Hero */}
-      <section className="home-hero relative overflow-hidden">
-        <div className="relative mx-auto grid max-w-6xl gap-10 px-5 pb-12 pt-12 sm:px-6 md:grid-cols-[1.15fr_1fr] md:gap-16 md:pb-16 md:pt-20">
+      <section className="discovery-hero">
+        <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-20">
           <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-card px-3 py-1.5 text-xs font-medium text-primary"><Sparkles className="h-3.5 w-3.5" /> YOUR EVERYDAY TOOLKIT</span>
-            <h1 className="mt-6 text-5xl font-semibold leading-[1.08] tracking-tight sm:text-6xl">Small tools.<br /><span className="text-primary">Possibilities, endless.</span></h1>
-            <p className="mt-4 max-w-lg text-base leading-7 text-muted-foreground">A thoughtful collection of 50 free tools for the things you do every day. Create, convert and simplify — privately, in your browser.</p>
-            <div className="relative mt-8 max-w-lg">
-              <div className="flex items-center gap-3 rounded-lg border border-border bg-card px-4 shadow-soft focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-ring/10">
-                <Search className="h-5 w-5 text-muted-foreground" />
-                <input value={q} onChange={(e) => setQ(e.target.value)} onKeyDown={(e) => e.key === "Enter" && hits[0] && nav({ to: "/tools/$slug", params: { slug: hits[0].slug } })}
-                  placeholder="What do you need to do?" className="h-14 min-w-0 flex-1 bg-transparent outline-none placeholder:text-muted-foreground" aria-label="Search tools" />
-              </div>
-              {q.trim() && (
-                <div className="absolute inset-x-0 top-16 z-10 rounded-lg border border-border bg-popover p-2 shadow-lift">
-                  {hits.length === 0 && <p className="px-3 py-4 text-sm text-muted-foreground">No tools found.</p>}
-                  {hits.map((h) => <Link key={h.slug} to="/tools/$slug" params={{ slug: h.slug }} className="flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-accent"><h.icon className="h-4 w-4 text-primary" />{h.name}</Link>)}
-                </div>
-              )}
+            <span className="eyebrow">
+              <span className="h-1.5 w-1.5 rounded-full bg-success" /> THE EVERYDAY TOOLKIT
+            </span>
+            <h1 className="mt-6 text-5xl font-semibold leading-[1.06] tracking-tight sm:text-6xl">
+              Less busywork.
+              <br />
+              <span className="text-primary">More possibilities.</span>
+            </h1>
+            <p className="mt-6 max-w-lg text-base leading-7 text-muted-foreground">
+              Make room for what matters. 50 thoughtfully simple tools for your images, documents,
+              ideas and everyday work.
+            </p>
+            <button
+              onClick={() => setSearch(true)}
+              className="hero-search mt-8 flex w-full max-w-lg items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-soft"
+              aria-label="Find a tool"
+            >
+              <Search className="h-5 w-5 shrink-0 text-primary" />
+              <span className="flex-1 text-sm text-muted-foreground">
+                What would you like to do?
+              </span>
+              <span className="rounded-lg bg-primary p-2 text-primary-foreground">
+                <ArrowRight className="h-4 w-4" />
+              </span>
+            </button>
+            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
+              <span>Try:</span>
+              {[
+                ["pdf-merger", "Merge PDFs"],
+                ["image-resizer", "Resize an image"],
+                ["json-formatter", "Format JSON"],
+              ].map(([slug, label]) => (
+                <Link
+                  key={slug}
+                  to="/tools/$slug"
+                  params={{ slug }}
+                  className="underline decoration-border underline-offset-4 hover:text-primary"
+                >
+                  {label}
+                </Link>
+              ))}
             </div>
-            <div className="mt-6 flex flex-wrap gap-5 text-sm text-muted-foreground">
-              {[[BadgeCheck, "100% Free"], [UserX, "No Signup Required"], [ShieldCheck, "Privacy First"]].map(([I, l]) => { const Icon = I as typeof BadgeCheck; return <span key={l as string} className="flex items-center gap-1.5"><Icon className="h-4 w-4 text-success" />{l as string}</span>; })}
+            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-muted-foreground">
+              {["Always free", "No account needed", "Files stay with you"].map((text) => (
+                <span key={text} className="flex items-center gap-1.5">
+                  <Check className="h-3.5 w-3.5 text-success" />
+                  {text}
+                </span>
+              ))}
             </div>
           </div>
-          {/* Bento preview */}
-          <div className="hero-tool-grid grid grid-cols-2 gap-4 self-center max-sm:[&>a]:min-h-28 max-sm:[&>a]:row-span-1 max-sm:[&>a]:gap-3 max-sm:[&>a]:p-4">
-            {featured.map((t, i) => {
-              const cat = categories.find((c) => c.id === t.category);
-              if (!cat) return null;
-              return (
-                <Link key={t.slug} to="/tools/$slug" params={{ slug: t.slug }} className={`bento bento-hover flex flex-col justify-between gap-6 p-5 ${i === 0 ? "row-span-2 min-h-60" : "min-h-28"}`}>
-                  <span className={`grid h-11 w-11 place-items-center rounded-lg ${toneClass[cat.tone]}`}><t.icon className="h-5 w-5" /></span>
-                  <div><p className="font-semibold">{t.name}</p>{i === 0 && <p className="mt-1 hidden text-sm text-muted-foreground sm:block">{t.description}</p>}</div>
-                </Link>
-              );
-            })}
-            <div className="bento col-span-1 flex items-center gap-3 bg-accent/40 p-5 text-primary"><Zap className="h-5 w-5" /><span className="text-sm font-medium">Runs on your device</span></div>
+          <div className="starter-panel rounded-3xl border border-border bg-card p-5 shadow-lift sm:p-7">
+            <div className="mb-6 flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                A little help, every day
+              </span>
+              <Sparkles className="h-4 w-4 text-primary" />
+            </div>
+            <h2 className="text-2xl font-semibold">One task. A simpler way.</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Pick a starting point and make it yours.
+            </p>
+            <div className="mt-6 space-y-2">
+              {shortcuts.map((slug) => {
+                const t = getTool(slug)!;
+                const cat = categories.find((c) => c.id === t.category)!;
+                return (
+                  <Link
+                    key={slug}
+                    to="/tools/$slug"
+                    params={{ slug }}
+                    className="starter-link group flex items-center gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-secondary/50"
+                  >
+                    <span
+                      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${toneClass[cat.tone]}`}
+                    >
+                      <t.icon className="h-5 w-5" />
+                    </span>
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-sm font-semibold">{t.name}</span>
+                      <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
+                        {t.description}
+                      </span>
+                    </span>
+                    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
+                  </Link>
+                );
+              })}
+            </div>
+            <div className="mt-5 flex items-center gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
+              <ShieldCheck className="h-4 w-4 text-success" />
+              Your workspace is your browser.
+            </div>
           </div>
         </div>
       </section>
 
-      <Section title="Popular tools" link={{ to: "/popular", label: "See all popular" }}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{popularTools.slice(0, 8).map((t) => <ToolCard key={t.slug} tool={t} />)}</div>
-      </Section>
-
-      <Section title="Browse categories" link={{ to: "/categories", label: "All categories" }}>
-        <div className="grid gap-4 md:grid-cols-3">
-          {categories.map((c, i) => (
-            <Link key={c.id} to="/categories/$category" params={{ category: c.id }} className={`bento bento-hover flex flex-col gap-4 p-6`}>
-              <div className="flex items-center justify-between"><span className={`grid h-12 w-12 place-items-center rounded-xl ${toneClass[c.tone]}`}><c.icon className="h-6 w-6" /></span><span className="text-sm text-muted-foreground">{toolsIn(c.id).length} tools</span></div>
-              <div><h3 className="text-lg font-semibold">{c.name}</h3><p className="mt-1 text-sm text-muted-foreground">{c.description}</p></div>
-              
+      <section className="mx-auto max-w-6xl px-5 pt-10 sm:px-6" aria-label="Browse by category">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-sm font-semibold">Find your kind of tool</h2>
+          <span className="text-xs text-muted-foreground">6 collections · 50 tools</span>
+        </div>
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          {categories.map((c) => (
+            <Link
+              key={c.id}
+              to="/categories/$category"
+              params={{ category: c.id }}
+              className="category-tile bento bento-hover flex flex-col gap-4 p-4"
+            >
+              <c.icon className="h-5 w-5 text-primary" />
+              <span>
+                <span className="block text-sm font-semibold">{c.short}</span>
+                <span className="mt-1 block text-xs text-muted-foreground">
+                  {toolsIn(c.id).length} tools
+                </span>
+              </span>
             </Link>
           ))}
         </div>
-      </Section>
+      </section>
 
-      <Section title="Recently added" link={{ to: "/new", label: "View new tools" }}>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{recentTools.slice(0, 4).map((t) => <ToolCard key={t.slug} tool={t} />)}</div>
-      </Section>
-
-      <Section title="Tools for everyone">
-        <div className="grid gap-4 md:grid-cols-4">
-          {[[GraduationCap, "Students", "Word counts, PDF merges and image-to-PDF for assignments.", ["word-counter", "images-to-pdf"]], [Palette, "Creators", "Compress, crop and convert images for any platform.", ["image-compressor", "image-cropper"]], [Code2, "Developers", "JSON, Base64, JWT, regex and hashes in one place.", ["json-formatter", "jwt-decoder"]], [Briefcase, "Everyday work", "QR codes, passwords and file zipping without the fuss.", ["qr-code-generator", "zip-creator"]]].map(([I, t, d, links]) => {
-            const Icon = I as typeof Code2;
-            return (
-              <div key={t as string} className="flex flex-col gap-3 border-t border-border pt-5">
-                <Icon className="h-6 w-6 text-primary" /><h3 className="font-semibold">For {(t as string).toLowerCase()}</h3><p className="text-sm text-muted-foreground">{d as string}</p>
-                <div className="mt-auto flex flex-wrap gap-2 pt-2">{(links as string[]).map((s) => <Link key={s} to="/tools/$slug" params={{ slug: s }} className="rounded-md bg-secondary px-2 py-1 text-xs hover:bg-accent">{getTool(s)?.name}</Link>)}</div>
-              </div>
-            );
-          })}
+      <section className="mx-auto max-w-6xl px-5 py-14 sm:px-6 md:py-20">
+        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
+          <div>
+            <p className="eyebrow mb-3">THE DAILY ESSENTIALS</p>
+            <h2 className="text-3xl font-semibold">Small tasks, sorted.</h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              A few favorites to keep your day moving.
+            </p>
+          </div>
+          <Link to="/tools" className="text-link">
+            Explore all 50 tools <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
-      </Section>
-
-      <Section title="Why DOVZO?">
-        <div className="grid gap-4 md:grid-cols-4">
-          {[[BadgeCheck, "Completely free", "Every tool, every feature. No subscriptions or credits."], [UserX, "No signup", "No accounts, no emails, no passwords."], [ShieldCheck, "Privacy-first", "Your files are processed on your device and never uploaded."], [Zap, "Simple & fast", "One page, one job. Open it, use it, done."]].map(([I, t, d]) => {
-            const Icon = I as typeof Zap;
-            return <div key={t as string} className="border-t border-border pt-5"><span className="grid h-10 w-10 place-items-center rounded-xl bg-accent text-accent-foreground"><Icon className="h-5 w-5" /></span><h3 className="mt-4 font-semibold">{t as string}</h3><p className="mt-1 text-sm text-muted-foreground">{d as string}</p></div>;
-          })}
-        </div>
-      </Section>
-
-      <Section title="Questions">
-        <Accordion type="single" collapsible className="border-y border-border">
-          {faqs.map(([q, a]) => <AccordionItem key={q} value={q}><AccordionTrigger className="text-left">{q}</AccordionTrigger><AccordionContent className="text-muted-foreground">{a}</AccordionContent></AccordionItem>)}
-        </Accordion>
-      </Section>
-
-      <section className="mx-auto mt-12 max-w-6xl px-5 sm:px-6 md:mt-20">
-        <div className="flex flex-col items-start gap-2 border-y border-border py-8 md:py-10">
-          <h2 className="text-2xl font-semibold md:text-3xl">50 tools. Zero sign‑ups.</h2>
-          <p className="max-w-md text-muted-foreground">Pick a tool and get it done in seconds.</p>
-          <Link to="/tools" className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary px-5 py-3 text-sm font-medium text-primary-foreground">Explore all tools <ArrowRight className="h-4 w-4" /></Link>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {popularTools.slice(0, 8).map((t) => (
+            <ToolCard key={t.slug} tool={t} />
+          ))}
         </div>
       </section>
-    </>
-  );
-}
 
-function Section({ title, link, children }: { title: string; link?: { to: "/popular" | "/categories" | "/new"; label: string }; children: React.ReactNode }) {
-  return (
-    <section className="mx-auto mt-12 max-w-6xl px-5 sm:px-6 md:mt-20">
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-semibold md:text-2xl">{title}</h2>
-        {link && <Link to={link.to} className="flex items-center gap-1 text-sm font-medium text-primary">{link.label}<ArrowRight className="h-4 w-4" /></Link>}
-      </div>
-      {children}
-    </section>
+      <section className="mx-auto max-w-6xl px-5 sm:px-6">
+        <div className="privacy-panel grid gap-8 rounded-3xl border border-border bg-card p-7 md:grid-cols-[1fr_1.1fr] md:p-10">
+          <div>
+            <span className="mb-5 inline-flex rounded-xl bg-success/10 p-3 text-success">
+              <ShieldCheck className="h-6 w-6" />
+            </span>
+            <h2 className="text-3xl font-semibold">
+              Your files.
+              <br />
+              Your device. Your business.
+            </h2>
+            <p className="mt-4 max-w-sm text-sm leading-7 text-muted-foreground">
+              No upload queue. No account to create. Your browser does the work, and you stay in
+              control of the result.
+            </p>
+            <Link to="/privacy" className="text-link mt-5">
+              How we protect your privacy <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+          <ol className="divide-y divide-border">
+            {[
+              ["Choose your tool", "Find the right workspace for your file, text or idea."],
+              ["Make it your own", "Add your input and adjust the available settings."],
+              [
+                "Take the result with you",
+                "Download, copy or inspect your output right in the workspace.",
+              ],
+            ].map(([title, description], i) => (
+              <li key={title} className="flex gap-4 py-6 first:pt-0 last:pb-0">
+                <span className="pt-1 font-mono text-xs text-primary">0{i + 1}</span>
+                <div>
+                  <h3 className="font-semibold">{title}</h3>
+                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="mx-auto grid max-w-6xl gap-8 px-5 py-14 sm:px-6 md:grid-cols-[.7fr_1fr] md:py-20">
+        <div>
+          <p className="eyebrow mb-3">GOOD TO KNOW</p>
+          <h2 className="text-3xl font-semibold">
+            Simple tools.
+            <br />
+            Straight answers.
+          </h2>
+          <p className="mt-4 text-sm text-muted-foreground">A few things before you get started.</p>
+        </div>
+        <Accordion type="single" collapsible>
+          {faqs.map(([q, a]) => (
+            <AccordionItem key={q} value={q}>
+              <AccordionTrigger className="text-left">{q}</AccordionTrigger>
+              <AccordionContent className="leading-7 text-muted-foreground">{a}</AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-5 sm:px-6">
+        <div className="directory-cta flex flex-col items-start justify-between gap-6 rounded-3xl bg-primary p-8 text-primary-foreground sm:flex-row sm:items-center md:p-10">
+          <div>
+            <Zap className="mb-4 h-6 w-6" />
+            <h2 className="text-2xl font-semibold">A lighter way to get things done.</h2>
+            <p className="mt-2 text-sm opacity-85">Your next useful tool is one click away.</p>
+          </div>
+          <Link
+            to="/tools"
+            className="inline-flex shrink-0 items-center gap-3 rounded-xl bg-card px-5 py-3 text-sm font-semibold text-foreground"
+          >
+            Open the toolkit <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+      </section>
+      <SearchDialog open={search} onClose={() => setSearch(false)} />
+    </>
   );
 }

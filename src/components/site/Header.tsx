@@ -8,10 +8,9 @@ import { savePreference } from "@/lib/browser-storage";
 
 const nav = [
   { to: "/", label: "Home" },
-  { to: "/tools", label: "All Tools" },
+  { to: "/tools", label: "Toolkit" },
   { to: "/categories", label: "Categories" },
   { to: "/popular", label: "Popular" },
-  { to: "/new", label: "New" },
 ] as const;
 
 export function Header() {
@@ -22,7 +21,10 @@ export function Header() {
   useEffect(() => {
     setDark(document.documentElement.classList.contains("dark"));
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") { e.preventDefault(); setSearch(true); }
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setSearch(true);
+      }
       if (e.key === "Escape") setMenu(false);
     };
     window.addEventListener("keydown", onKey);
@@ -43,30 +45,72 @@ export function Header() {
           <Logo />
           <nav aria-label="Main navigation" className="ml-6 hidden items-center gap-1 md:flex">
             {nav.map((n) => (
-              <Link key={n.to} to={n.to} activeOptions={{ exact: n.to === "/" }}
+              <Link
+                key={n.to}
+                to={n.to}
+                activeOptions={{ exact: n.to === "/" }}
                 className="rounded-lg px-3 py-1.5 text-sm text-muted-foreground transition hover:text-foreground"
-                activeProps={{ className: "bg-secondary text-foreground" }}>
+                activeProps={{ className: "bg-secondary text-foreground" }}
+              >
                 {n.label}
               </Link>
             ))}
           </nav>
           <div className="ml-auto flex items-center gap-1">
-            <Button variant="ghost" onClick={() => setSearch(true)} className="hidden h-9 items-center gap-2 border border-border bg-card/60 px-3 text-sm text-muted-foreground sm:flex">
-              <Search className="h-4 w-4" /> Search <kbd className="ml-5 font-mono text-[10px]">⌘K</kbd>
+            <Button
+              variant="ghost"
+              onClick={() => setSearch(true)}
+              className="hidden h-9 items-center gap-2 border border-border bg-card/60 px-3 text-sm text-muted-foreground sm:flex"
+            >
+              <Search className="h-4 w-4" /> Search{" "}
+              <kbd className="ml-5 font-mono text-[10px]">⌘K</kbd>
             </Button>
-            <Button variant="ghost" onClick={() => setSearch(true)} className="grid h-9 w-9 place-items-center rounded-lg sm:hidden" aria-label="Search"><Search className="h-4 w-4" /></Button>
-            <Button variant="ghost" onClick={toggle} className="grid h-9 w-9 place-items-center rounded-lg hover:bg-secondary" title={dark ? "Switch to light theme" : "Switch to dark theme"} aria-label="Toggle theme">
+            <Button
+              variant="ghost"
+              onClick={() => setSearch(true)}
+              className="grid h-9 w-9 place-items-center rounded-lg sm:hidden"
+              aria-label="Search"
+            >
+              <Search className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              onClick={toggle}
+              className="grid h-9 w-9 place-items-center rounded-lg hover:bg-secondary"
+              title={dark ? "Switch to light theme" : "Switch to dark theme"}
+              aria-label="Toggle theme"
+            >
               {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </Button>
-            <Button variant="ghost" onClick={() => setMenu(!menu)} className="grid h-9 w-9 place-items-center rounded-lg md:hidden" aria-label="Menu" aria-expanded={menu} aria-controls="mobile-navigation">
+            <Button
+              variant="ghost"
+              onClick={() => setMenu(!menu)}
+              className="grid h-9 w-9 place-items-center rounded-lg md:hidden"
+              aria-label="Menu"
+              aria-expanded={menu}
+              aria-controls="mobile-navigation"
+            >
               {menu ? <X className="h-4 w-4" /> : <Menu className="h-4 w-4" />}
             </Button>
           </div>
         </div>
         {menu && (
-          <nav id="mobile-navigation" aria-label="Mobile navigation" className="mx-5 mb-3 flex flex-col gap-1 border-t border-border pt-3 md:hidden">
+          <nav
+            id="mobile-navigation"
+            aria-label="Mobile navigation"
+            className="mx-5 mb-3 flex flex-col gap-1 border-t border-border pt-3 md:hidden"
+          >
             {nav.map((n) => (
-              <Link key={n.to} to={n.to} onClick={() => setMenu(false)} activeOptions={{ exact: n.to === "/" }} activeProps={{ className: "bg-secondary text-foreground" }} className="rounded-lg px-3 py-2.5 text-sm">{n.label}</Link>
+              <Link
+                key={n.to}
+                to={n.to}
+                onClick={() => setMenu(false)}
+                activeOptions={{ exact: n.to === "/" }}
+                activeProps={{ className: "bg-secondary text-foreground" }}
+                className="rounded-lg px-3 py-2.5 text-sm"
+              >
+                {n.label}
+              </Link>
             ))}
           </nav>
         )}
