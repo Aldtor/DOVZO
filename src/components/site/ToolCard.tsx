@@ -10,11 +10,11 @@ export function ToolCard({ tool, compact = false }: { tool: Tool; compact?: bool
     <Link
       to="/tools/$slug"
       params={{ slug: tool.slug }}
-      className={`bento bento-hover group relative flex h-full flex-col gap-4 p-5 ${compact ? "min-h-40" : "min-h-52"}`}
+      className={`bento bento-hover group relative flex h-full flex-col gap-3 p-5 ${compact ? "min-h-40" : "min-h-48"}`}
     >
       <div className="flex items-start justify-between">
-        <span className={`grid h-10 w-10 place-items-center rounded-lg ${toneClass[cat.tone]}`}>
-          <Icon className="h-5 w-5" />
+        <span className={`grid h-12 w-12 place-items-center rounded-lg ${toneClass[cat.tone]}`}>
+          <Icon className="h-6 w-6" />
         </span>
         <ArrowUpRight className="h-4 w-4 text-muted-foreground/60 transition group-hover:text-primary" />
       </div>

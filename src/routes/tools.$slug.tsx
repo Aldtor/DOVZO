@@ -114,17 +114,17 @@ function ToolPage() {
         <span className="text-foreground">{tool.name}</span>
       </nav>
 
-      <header className="mt-6 flex flex-wrap items-start gap-3 md:gap-4">
+      <header className="tool-heading mt-7 flex flex-col items-center gap-3 text-center">
         <span
           className={`grid h-12 w-12 shrink-0 place-items-center rounded-lg ${toneClass[cat.tone]}`}
         >
           <tool.icon className="h-7 w-7" />
         </span>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold md:text-3xl">{tool.name}</h1>
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold md:text-4xl">{tool.name}</h1>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">{tool.description}</p>
         </div>
-        <span className="flex w-full items-center gap-1.5 py-1 md:w-auto text-xs font-medium text-success">
+        <span className="flex items-center justify-center gap-1.5 py-1 text-xs font-medium text-success">
           <ShieldCheck className="h-4 w-4" /> Free · runs on your device
         </span>
       </header>

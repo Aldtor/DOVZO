@@ -23,6 +23,16 @@ async function open(path) {
 }
 try {
   await open("/");
+  const homeCatalog = page.getByRole("region", { name: "All tools", exact: true });
+  assert.equal(await homeCatalog.locator('a[href^="/tools/"]').count(), 50);
+  await page.getByRole("textbox", { name: "Find a tool by name or task" }).fill("word counter");
+  assert.equal(await homeCatalog.locator('a[href^="/tools/"]').count(), 1);
+  await page.getByRole("textbox", { name: "Find a tool by name or task" }).fill("zz-no-match");
+  await page.getByRole("heading", { name: "No matching tools" }).waitFor();
+  await page.getByRole("button", { name: "Show all tools" }).click();
+  await page.getByRole("button", { name: "PDF", exact: true }).click();
+  assert.equal(await homeCatalog.locator('a[href^="/tools/"]').count(), 8);
+  console.log("PASS homepage live search, category filter and empty-state recovery");
   await page.getByRole("button", { name: "Find a tool", exact: true }).click();
   const search = page.getByRole("combobox");
   await search.fill("pdf merger");
@@ -49,17 +59,39 @@ try {
   await page.getByRole("status").filter({ hasText: "Showing 50 of 50" }).waitFor();
   console.log("PASS empty state, sorting and list view");
   for (const width of [390, 768, 1440])
-    for (const route of ["/", "/tools", "/tools/pdf-merger"]) {
+    for (const route of [
+      "/",
+      "/tools",
+      "/tools/pdf-merger",
+      "/categories",
+      "/categories/image",
+      "/categories/pdf",
+      "/categories/text",
+      "/categories/developer",
+      "/categories/generators",
+      "/categories/file-media",
+      "/search?q=pdf",
+      "/popular",
+      "/new",
+      "/about",
+      "/contact",
+      "/privacy",
+      "/terms",
+      "/disclaimer",
+      "/admin",
+    ]) {
       await page.setViewportSize({ width, height: 1000 });
       await open(route);
       assert(
         await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1),
         `Overflow ${route} at ${width}`,
       );
-      await page.screenshot({
-        path: `/tmp/dovzo-design/${route.replaceAll("/", "_") || "home"}-${width}.png`,
-        fullPage: true,
-      });
+      assert.equal(await page.locator("main h1").count(), 1, `One page heading ${route}`);
+      if (["/", "/tools", "/tools/pdf-merger", "/categories"].includes(route))
+        await page.screenshot({
+          path: `/tmp/dovzo-design/${route.replaceAll("/", "_") || "home"}-${width}.png`,
+          fullPage: false,
+        });
     }
   await page.setViewportSize({ width: 390, height: 844 });
   await open("/");

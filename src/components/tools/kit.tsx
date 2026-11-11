@@ -55,12 +55,12 @@ export function FileDrop({ accept, multiple, onFiles, label, disabled = false }:
       onDragOver={(e) => { e.preventDefault(); setOver(true); }}
       onDragLeave={() => setOver(false)}
       onDrop={(e) => { e.preventDefault(); setOver(false); void receive(Array.from(e.dataTransfer.files)); }}
-      className={`file-drop flex min-h-60 cursor-pointer flex-col items-center justify-center gap-4 rounded-lg border border-dashed px-5 py-8 text-center transition-colors sm:min-h-72 ${over ? "border-primary bg-accent" : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-accent/30"}`}
+      className={`file-drop flex min-h-64 cursor-pointer flex-col items-center justify-center gap-4 rounded-lg border border-dashed px-5 py-8 text-center transition-colors sm:min-h-72 ${over ? "border-primary bg-accent" : "border-border bg-secondary/30 hover:border-primary/60 hover:bg-accent/30"}`}
     >
       <span className="grid h-14 w-14 place-items-center rounded-2xl border border-primary/15 bg-card text-primary shadow-soft"><Upload className="h-5 w-5" /></span>
       <div>
         <p className="font-medium">{loading ? "Opening files…" : label ?? (multiple ? "Drop files here or click to choose" : "Drop a file here or click to choose")}</p>
-        <span className="mt-4 inline-flex rounded-lg bg-primary px-5 py-2 text-sm font-medium text-primary-foreground">{loading ? "Opening…" : multiple ? "Choose files" : "Choose file"}</span>
+        <span className="mt-5 inline-flex rounded-lg bg-primary px-8 py-4 text-base font-semibold text-primary-foreground">{loading ? "Opening…" : multiple ? "Choose files" : "Choose file"}</span>
         <p className="mt-4 flex items-center justify-center gap-1.5 text-xs text-muted-foreground"><ShieldCheck className="h-3.5 w-3.5 shrink-0" />Files stay on your device</p>
         <p className="mt-1 text-xs text-muted-foreground">Up to 100 MiB per selection</p>
       </div>

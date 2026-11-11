@@ -4,6 +4,7 @@ import { Menu, Moon, Search, Sun, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "./Logo";
 import { SearchDialog } from "./SearchDialog";
+import { categories } from "@/lib/tools";
 import { savePreference } from "@/lib/browser-storage";
 
 const nav = [
@@ -114,6 +115,25 @@ export function Header() {
             ))}
           </nav>
         )}
+        <nav
+          aria-label="Tool collections"
+          className="collection-nav border-t border-border/60 bg-card/80"
+        >
+          <div className="mx-auto flex max-w-6xl gap-5 overflow-x-auto px-5 sm:px-6">
+            {categories.map((c) => (
+              <Link
+                key={c.id}
+                to="/categories/$category"
+                params={{ category: c.id }}
+                className="flex shrink-0 items-center gap-2 border-b-2 border-transparent py-3 text-xs font-medium text-muted-foreground hover:text-primary"
+                activeProps={{ className: "border-primary text-primary" }}
+              >
+                <c.icon className="h-3.5 w-3.5" />
+                {c.name}
+              </Link>
+            ))}
+          </div>
+        </nav>
       </header>
       <SearchDialog open={search} onClose={() => setSearch(false)} />
     </>

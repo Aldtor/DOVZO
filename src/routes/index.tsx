@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, ArrowUpRight, Check, Search, ShieldCheck, Sparkles, Zap } from "lucide-react";
-import { useState } from "react";
+import { ArrowRight, Check, Search, SearchX, ShieldCheck, Zap, Monitor } from "lucide-react";
+import { useMemo, useState } from "react";
 import { ToolCard } from "@/components/site/ToolCard";
 import { SearchDialog } from "@/components/site/SearchDialog";
 import { meta } from "@/components/site/PageHeader";
-import { categories, getTool, popularTools, toneClass, toolsIn } from "@/lib/tools";
+import { categories, searchTools, tools, type CategoryId } from "@/lib/tools";
+import { Button } from "@/components/ui/button";
 import {
   Accordion,
   AccordionContent,
@@ -15,230 +16,196 @@ import {
 export const Route = createFileRoute("/")({
   head: () =>
     meta(
-      "DOVZO — Your everyday toolkit",
-      "50 free tools for images, PDFs, text, code and media. Work privately in your browser. No signup.",
+      "DOVZO — Free online tools for your everyday work",
+      "All the image, PDF, text, developer and media tools you need. Free to use, no signup, and files stay on your device.",
     ),
   component: Home,
 });
 
-const shortcuts = ["image-compressor", "pdf-merger", "qr-code-generator", "zip-creator"];
 const faqs = [
   [
-    "Is every tool really free?",
-    "Yes. All 50 tools are free, with no subscriptions, credits or sign-up requirements.",
+    "Are all the tools free?",
+    "Yes. All 50 tools are free to use, without a subscription, credits or an account.",
   ],
   [
-    "Where do my files go?",
-    "Your selected files are processed locally in your browser. DOVZO does not upload them to a server. Downloaded results are saved wherever your browser normally saves files.",
+    "Do my files leave my device?",
+    "No. Selected files are processed in your browser, without uploading them to DOVZO. Save the result using your browser's download controls.",
   ],
   [
-    "Can I use DOVZO on my phone?",
-    "Yes, most tools work in modern mobile browsers. Video recording and supported codecs depend on your browser. Large files work best on a computer.",
+    "Which files can I use?",
+    "Each tool lists the formats it supports. File selections have a 100 MiB limit, images have dimension limits, and GIF clips are limited to 15 seconds. Video and audio support depends on your browser's codecs.",
   ],
   [
-    "What are the file limits?",
-    "File selections are limited to 100 MiB. Image processing has dimension limits, and GIF clips are limited to 15 seconds. Each workspace explains its supported formats and processing options.",
+    "Does it work on phones and tablets?",
+    "Most tools work in modern mobile browsers. Video recording depends on browser support, and large files are easier to process on a computer.",
   ],
 ];
 
 function Home() {
+  const [q, setQ] = useState("");
+  const [category, setCategory] = useState<CategoryId | "all">("all");
   const [search, setSearch] = useState(false);
+  const visible = useMemo(() => {
+    const results = q.trim() ? searchTools(q) : tools;
+    return category === "all" ? results : results.filter((t) => t.category === category);
+  }, [q, category]);
   return (
     <>
-      <section className="discovery-hero">
-        <div className="mx-auto grid max-w-6xl items-center gap-12 px-5 py-12 sm:px-6 md:grid-cols-[1.1fr_1fr] md:py-20">
-          <div>
-            <span className="eyebrow">
-              <span className="h-1.5 w-1.5 rounded-full bg-success" /> THE EVERYDAY TOOLKIT
-            </span>
-            <h1 className="mt-6 text-5xl font-semibold leading-[1.06] tracking-tight sm:text-6xl">
-              Less busywork.
-              <br />
-              <span className="text-primary">More possibilities.</span>
-            </h1>
-            <p className="mt-6 max-w-lg text-base leading-7 text-muted-foreground">
-              Make room for what matters. 50 thoughtfully simple tools for your images, documents,
-              ideas and everyday work.
-            </p>
-            <button
-              onClick={() => setSearch(true)}
-              className="hero-search mt-8 flex w-full max-w-lg items-center gap-3 rounded-2xl border border-border bg-card p-4 text-left shadow-soft"
-              aria-label="Find a tool"
-            >
-              <Search className="h-5 w-5 shrink-0 text-primary" />
-              <span className="flex-1 text-sm text-muted-foreground">
-                What would you like to do?
-              </span>
-              <span className="rounded-lg bg-primary p-2 text-primary-foreground">
-                <ArrowRight className="h-4 w-4" />
-              </span>
+      <section className="catalog-hero mx-auto max-w-6xl px-5 pb-8 pt-10 text-center sm:px-6 md:pt-14">
+        <p className="eyebrow justify-center">
+          <span className="h-1.5 w-1.5 rounded-full bg-success" /> FREE TOOLS. EVERYDAY
+          POSSIBILITIES.
+        </p>
+        <h1 className="mx-auto mt-4 max-w-4xl text-4xl font-bold leading-tight tracking-tight sm:text-5xl">
+          Every tool you need.
+          <br className="sm:hidden" /> <span className="text-primary">All in one place.</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-muted-foreground">
+          Work with images, organize PDFs, create something new.
+          <br className="hidden sm:block" /> Simple online tools that get straight to the point.
+        </p>
+        <div className="mx-auto mt-6 flex max-w-xl items-center gap-3 rounded-xl border border-border bg-card px-4 shadow-soft focus-within:border-primary">
+          <Search className="h-5 w-5 shrink-0 text-muted-foreground" />
+          <input
+            aria-label="Find a tool by name or task"
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            placeholder="Search tools, e.g. compress image or merge PDF"
+            className="h-14 min-w-0 flex-1 bg-transparent text-sm outline-none"
+          />
+          {q && (
+            <button onClick={() => setQ("")} className="text-xs font-semibold text-primary">
+              Clear
             </button>
-            <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 text-xs text-muted-foreground">
-              <span>Try:</span>
-              {[
-                ["pdf-merger", "Merge PDFs"],
-                ["image-resizer", "Resize an image"],
-                ["json-formatter", "Format JSON"],
-              ].map(([slug, label]) => (
-                <Link
-                  key={slug}
-                  to="/tools/$slug"
-                  params={{ slug }}
-                  className="underline decoration-border underline-offset-4 hover:text-primary"
-                >
-                  {label}
-                </Link>
-              ))}
-            </div>
-            <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium text-muted-foreground">
-              {["Always free", "No account needed", "Files stay with you"].map((text) => (
-                <span key={text} className="flex items-center gap-1.5">
-                  <Check className="h-3.5 w-3.5 text-success" />
-                  {text}
-                </span>
-              ))}
-            </div>
-          </div>
-          <div className="starter-panel rounded-3xl border border-border bg-card p-5 shadow-lift sm:p-7">
-            <div className="mb-6 flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
-                A little help, every day
-              </span>
-              <Sparkles className="h-4 w-4 text-primary" />
-            </div>
-            <h2 className="text-2xl font-semibold">One task. A simpler way.</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Pick a starting point and make it yours.
-            </p>
-            <div className="mt-6 space-y-2">
-              {shortcuts.map((slug) => {
-                const t = getTool(slug)!;
-                const cat = categories.find((c) => c.id === t.category)!;
-                return (
-                  <Link
-                    key={slug}
-                    to="/tools/$slug"
-                    params={{ slug }}
-                    className="starter-link group flex items-center gap-3 rounded-xl border border-transparent p-3 transition-colors hover:border-border hover:bg-secondary/50"
-                  >
-                    <span
-                      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl ${toneClass[cat.tone]}`}
-                    >
-                      <t.icon className="h-5 w-5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="block text-sm font-semibold">{t.name}</span>
-                      <span className="mt-0.5 block text-xs leading-5 text-muted-foreground">
-                        {t.description}
-                      </span>
-                    </span>
-                    <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground group-hover:text-primary" />
-                  </Link>
-                );
-              })}
-            </div>
-            <div className="mt-5 flex items-center gap-2 border-t border-border pt-5 text-xs text-muted-foreground">
-              <ShieldCheck className="h-4 w-4 text-success" />
-              Your workspace is your browser.
-            </div>
-          </div>
+          )}
+          <button
+            aria-label="Find a tool"
+            onClick={() => setSearch(true)}
+            className="hidden rounded-md border border-border px-2 py-1 font-mono text-xs text-muted-foreground sm:block"
+          >
+            ⌘ K
+          </button>
         </div>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-5 pt-10 sm:px-6" aria-label="Browse by category">
-        <div className="mb-5 flex items-center justify-between">
-          <h2 className="text-sm font-semibold">Find your kind of tool</h2>
-          <span className="text-xs text-muted-foreground">6 collections · 50 tools</span>
-        </div>
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-          {categories.map((c) => (
-            <Link
-              key={c.id}
-              to="/categories/$category"
-              params={{ category: c.id }}
-              className="category-tile bento bento-hover flex flex-col gap-4 p-4"
-            >
-              <c.icon className="h-5 w-5 text-primary" />
-              <span>
-                <span className="block text-sm font-semibold">{c.short}</span>
-                <span className="mt-1 block text-xs text-muted-foreground">
-                  {toolsIn(c.id).length} tools
-                </span>
-              </span>
-            </Link>
+        <div className="mt-5 flex flex-wrap justify-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+          {["50 free tools", "No sign-up", "Files stay on your device"].map((t) => (
+            <span key={t} className="flex items-center gap-1.5">
+              <Check className="h-3.5 w-3.5 text-success" />
+              {t}
+            </span>
           ))}
         </div>
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 py-14 sm:px-6 md:py-20">
-        <div className="mb-7 flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <p className="eyebrow mb-3">THE DAILY ESSENTIALS</p>
-            <h2 className="text-3xl font-semibold">Small tasks, sorted.</h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              A few favorites to keep your day moving.
-            </p>
+      <section className="mx-auto max-w-6xl px-5 pb-14 sm:px-6" aria-label="All tools">
+        <div className="catalog-tabs sticky z-20 -mx-1 mb-5 overflow-x-auto bg-background/95 px-1 py-3 backdrop-blur-xl">
+          <div className="flex min-w-max justify-start gap-2 md:justify-center">
+            <button
+              onClick={() => setCategory("all")}
+              aria-pressed={category === "all"}
+              className="category-filter"
+            >
+              All tools <span>{tools.length}</span>
+            </button>
+            {categories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => setCategory(c.id)}
+                aria-pressed={category === c.id}
+                className="category-filter"
+              >
+                <c.icon className="h-4 w-4" />
+                {c.short}
+              </button>
+            ))}
           </div>
-          <Link to="/tools" className="text-link">
-            Explore all 50 tools <ArrowRight className="h-4 w-4" />
+        </div>
+        <div className="mb-4 flex items-center justify-between gap-3 text-xs text-muted-foreground">
+          <p role="status">
+            {visible.length} tools
+            {category !== "all"
+              ? ` · ${categories.find((c) => c.id === category)?.name}`
+              : " for work, study and everything in between"}
+          </p>
+          <Link to="/tools" className="shrink-0 hover:text-primary">
+            Your favorites →
           </Link>
         </div>
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {popularTools.slice(0, 8).map((t) => (
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {visible.map((t) => (
             <ToolCard key={t.slug} tool={t} />
           ))}
         </div>
+        {!visible.length && (
+          <div className="bento flex flex-col items-center gap-3 px-6 py-16 text-center">
+            <SearchX className="h-8 w-8 text-muted-foreground" />
+            <h2 className="text-lg font-semibold">No matching tools</h2>
+            <p className="text-sm text-muted-foreground">
+              Try another search or browse all categories.
+            </p>
+            <Button
+              onClick={() => {
+                setQ("");
+                setCategory("all");
+              }}
+            >
+              Show all tools
+            </Button>
+          </div>
+        )}
       </section>
 
-      <section className="mx-auto max-w-6xl px-5 sm:px-6">
-        <div className="privacy-panel grid gap-8 rounded-3xl border border-border bg-card p-7 md:grid-cols-[1fr_1.1fr] md:p-10">
-          <div>
-            <span className="mb-5 inline-flex rounded-xl bg-success/10 p-3 text-success">
-              <ShieldCheck className="h-6 w-6" />
-            </span>
-            <h2 className="text-3xl font-semibold">
-              Your files.
-              <br />
-              Your device. Your business.
-            </h2>
-            <p className="mt-4 max-w-sm text-sm leading-7 text-muted-foreground">
-              No upload queue. No account to create. Your browser does the work, and you stay in
-              control of the result.
+      <section className="border-y border-border bg-card py-12 md:py-16">
+        <div className="mx-auto max-w-6xl px-5 sm:px-6">
+          <div className="mx-auto max-w-xl text-center">
+            <h2 className="text-3xl font-semibold">Good tools. Fewer complications.</h2>
+            <p className="mt-3 text-sm leading-6 text-muted-foreground">
+              Everything you need to finish the task, without getting in your way.
             </p>
-            <Link to="/privacy" className="text-link mt-5">
-              How we protect your privacy <ArrowRight className="h-4 w-4" />
-            </Link>
           </div>
-          <ol className="divide-y divide-border">
+          <div className="mt-10 grid gap-8 md:grid-cols-3">
             {[
-              ["Choose your tool", "Find the right workspace for your file, text or idea."],
-              ["Make it your own", "Add your input and adjust the available settings."],
               [
-                "Take the result with you",
-                "Download, copy or inspect your output right in the workspace.",
+                ShieldCheck,
+                "Private by design",
+                "Your selected files stay in your browser. You decide what to save and where to save it.",
               ],
-            ].map(([title, description], i) => (
-              <li key={title} className="flex gap-4 py-6 first:pt-0 last:pb-0">
-                <span className="pt-1 font-mono text-xs text-primary">0{i + 1}</span>
-                <div>
-                  <h3 className="font-semibold">{title}</h3>
-                  <p className="mt-2 text-sm leading-6 text-muted-foreground">{description}</p>
+              [
+                Zap,
+                "Open it. Use it. Done.",
+                "No installation or registration. Choose a tool and start with your own files or text.",
+              ],
+              [
+                Monitor,
+                "A familiar workspace",
+                "Clear controls, helpful messages and a consistent experience on desktop and mobile.",
+              ],
+            ].map(([I, title, body]) => {
+              const Icon = I as typeof ShieldCheck;
+              return (
+                <div key={String(title)} className="text-center">
+                  <Icon className="mx-auto h-8 w-8 text-primary" />
+                  <h3 className="mt-4 font-semibold">{String(title)}</h3>
+                  <p className="mx-auto mt-2 max-w-xs text-sm leading-6 text-muted-foreground">
+                    {String(body)}
+                  </p>
                 </div>
-              </li>
-            ))}
-          </ol>
+              );
+            })}
+          </div>
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-6xl gap-8 px-5 py-14 sm:px-6 md:grid-cols-[.7fr_1fr] md:py-20">
+      <section className="mx-auto grid max-w-6xl gap-8 px-5 py-14 sm:px-6 md:grid-cols-[.7fr_1fr] md:py-16">
         <div>
-          <p className="eyebrow mb-3">GOOD TO KNOW</p>
-          <h2 className="text-3xl font-semibold">
-            Simple tools.
+          <p className="eyebrow">HELP & ANSWERS</p>
+          <h2 className="mt-3 text-3xl font-semibold">
+            A few things
             <br />
-            Straight answers.
+            worth knowing.
           </h2>
-          <p className="mt-4 text-sm text-muted-foreground">A few things before you get started.</p>
+          <Link to="/about" className="text-link mt-5">
+            Get to know DOVZO <ArrowRight className="h-4 w-4" />
+          </Link>
         </div>
         <Accordion type="single" collapsible>
           {faqs.map(([q, a]) => (
@@ -248,22 +215,6 @@ function Home() {
             </AccordionItem>
           ))}
         </Accordion>
-      </section>
-
-      <section className="mx-auto max-w-6xl px-5 sm:px-6">
-        <div className="directory-cta flex flex-col items-start justify-between gap-6 rounded-3xl bg-primary p-8 text-primary-foreground sm:flex-row sm:items-center md:p-10">
-          <div>
-            <Zap className="mb-4 h-6 w-6" />
-            <h2 className="text-2xl font-semibold">A lighter way to get things done.</h2>
-            <p className="mt-2 text-sm opacity-85">Your next useful tool is one click away.</p>
-          </div>
-          <Link
-            to="/tools"
-            className="inline-flex shrink-0 items-center gap-3 rounded-xl bg-card px-5 py-3 text-sm font-semibold text-foreground"
-          >
-            Open the toolkit <ArrowRight className="h-4 w-4" />
-          </Link>
-        </div>
       </section>
       <SearchDialog open={search} onClose={() => setSearch(false)} />
     </>
